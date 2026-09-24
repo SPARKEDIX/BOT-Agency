@@ -17,6 +17,12 @@ class WorkerAgent:
             return ScraperAgent(model=self.model).run(
                 instruction, context=context, stream_output=stream_output, on_retry=on_retry
             )
+        if self.role == "image_maker":
+            from agency.image_maker import ImageMakerAgent
+
+            return ImageMakerAgent().run(
+                instruction, context=context, stream_output=stream_output, on_retry=on_retry
+            )
         messages = [
             {"role": "system", "content": self.system},
             {"role": "user", "content": f"Context:\n{context}\n\nTask:\n{instruction}" if context else instruction},

@@ -17,6 +17,10 @@ AGENTS: dict[str, dict] = {
         "description": "Writes and explains code. Returns code + brief usage.",
         "system": "You are an expert coding agent. Return clean code with minimal explanation.",
     },
+    "coding": {
+        "description": "Dedicated coding agent (Gemma) for codegen, debugging, refactoring.",
+        "system": "You are an expert coding agent. Write clean, tested code with minimal explanation. Return file paths, code blocks, and run instructions.",
+    },
     "writer": {
         "description": "Drafts docs, limericks, marketing copy, summaries.",
         "system": "You are a creative writing agent. Be clear and vivid.",
@@ -29,11 +33,17 @@ AGENTS: dict[str, dict] = {
         "description": "Fetches website content via ScrapeGraphAI + Playwright, then summarizes.",
         "system": "You are a web-scraper agent. Extract the key facts from fetched page content. Return URL, title points, and concise summary.",
     },
+    "image_maker": {
+        "description": "Generates images via FLUX.1-schnell, saves JPG to ./outputs.",
+        "system": "You are an image-generation agent. Turn the task into a vivid image prompt and report the saved file path.",
+    },
 }
 
 # per-role model defaults (env override wins)
 ROLE_DEFAULT_MODEL: dict[str, str] = {
     "scraper": config.SCRAPER_MODEL,
+    "coding": config.CODING_MODEL,
+    "image_maker": config.IMAGE_MODEL,
 }
 
 

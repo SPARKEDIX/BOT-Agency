@@ -13,6 +13,18 @@ MAIN_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 # Web-scraper agent model (NIM id)
 SCRAPER_MODEL = os.getenv("SCRAPER_MODEL", "meta/muse-glimmer-30b")
 
+# Coding agent model (NIM id)
+CODING_MODEL = os.getenv("CODING_MODEL", "google/gemma-4-31b-it")
+
+# Image generation (NVIDIA Cloud, not integrate endpoint)
+IMAGE_MODEL = "black-forest-labs/flux.1-schnell"
+IMAGE_URL = os.getenv(
+    "IMAGE_URL",
+    "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell",
+)
+IMAGE_OUTPUT_DIR = os.getenv("IMAGE_OUTPUT_DIR", "./outputs")
+IMAGE_STEPS = int(os.getenv("IMAGE_STEPS", "4"))
+
 # Shared throughput budget: 40 requests / minute for the whole agency.
 # All agents (main + workers) go through one RateLimiter.
 RPM = 40

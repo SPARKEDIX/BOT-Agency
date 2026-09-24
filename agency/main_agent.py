@@ -17,16 +17,16 @@ ROUTER_SYSTEM = """You are the BOSS router of BOT-Agency (AI Agency).
 Look at the conversation history + latest user message.
 
 - Normal chat (greeting, small talk, simple Q&A, explanation, advice, follow-up): return {"type":"chat","reply":"..."} with the FULL reply.
-- Real task (multi-step work, research + code + docs, deliverables, needs specialists): return {"type":"task","tasks":[{"id":1,"agent":"researcher|coder|writer|reviewer|scraper","instruction":"..."}]} with 1-4 tasks.
-Available agents: researcher, coder, writer, reviewer, scraper (use scraper for any URL / fetch-website-content work).
+- Real task (multi-step work, research + code + docs, deliverables, needs specialists): return {"type":"task","tasks":[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|image_maker","instruction":"..."}]} with 1-4 tasks.
+Available agents: researcher, coder, coding, writer, reviewer, scraper, image_maker (use scraper for any URL / fetch-website-content work, coding for codegen/debugging/refactoring, image_maker for draw/generate-image/picture/photo/logo).
 Keep task instructions self-contained (workers see no other history).
 Return ONLY JSON, no other text."""
 
 PLANNER_SYSTEM = """You are the BOSS planner of BOT-Agency.
 Decompose the user goal into 1-4 sub-tasks.
 Return ONLY a JSON array, no other text. Format:
-[{"id":1,"agent":"researcher|coder|writer|reviewer|scraper","instruction":"..."}]
-Available agents: researcher, coder, writer, reviewer, scraper (URL / website-content work).
+[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|image_maker","instruction":"..."}]
+Available agents: researcher, coder, coding, writer, reviewer, scraper, image_maker (URL / website-content work, image_maker for images).
 Keep instructions self-contained (workers see no other history)."""
 
 SYNTH_SYSTEM = """You are the BOSS synthesizer of BOT-Agency.

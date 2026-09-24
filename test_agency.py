@@ -13,9 +13,10 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "writer", "reviewer", "scraper"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
     print("registry OK:", list(registry.AGENTS))
 
 
@@ -202,6 +203,69 @@ def test_router_uses_memory():
         nc.chat = orig
 
 
+def test_image_maker_mocked():
+    """Image maker: prompt/size parsing + FLUX POST + base64 save (all mocked, no network)."""
+    import base64
+    import tempfile
+    import agency.image_maker as im
+
+    assert im.parse_size("make it landscape 1344x768") == (1344, 768)
+    assert im.parse_size("portrait poster") == (768, 1344)
+    assert im.build_prompt("Generate an image of a red robot", "") == "a red robot"
+
+    fake_bytes = b"FAKEJPG"
+    b64 = base64.b64encode(fake_bytes).decode()
+
+    class FakeResp:
+        status_code = 200
+
+        def json(self):
+            return {"artifacts": [{"base64": b64, "seed": 123}]}
+
+    import requests
+    orig_post, orig_key, orig_wait = requests.post, None, im.limiter.wait
+    try:
+        import config as cfg
+        orig_key = cfg.NVIDIA_API_KEY
+        cfg.NVIDIA_API_KEY = "test-key"
+        requests.post = lambda url, headers=None, json=None, timeout=120: (
+            _ for _ in ()).throw(AssertionError("unset")) if False else FakeResp()
+        # capture payload
+        seen = {}
+
+        def fake_post(url, headers=None, json=None, timeout=120):
+            seen["url"] = url
+            seen["payload"] = json
+            assert url == im.INVOKE_URL, url
+            assert json["prompt"], json
+            return FakeResp()
+
+        requests.post = fake_post
+        im.limiter.wait = lambda: 0
+        with tempfile.TemporaryDirectory() as td:
+            out = im.ImageMakerAgent().run("Generate an image of a red robot, landscape")
+            # rerun save path check via returned file? run saves to ./outputs; check output text
+            assert out["role"] == "image_maker", out
+            assert "Saved to:" in out["output"], out
+            assert seen["payload"]["width"] == 1344, seen["payload"]
+            # direct save test to tmp
+            p = im.save_image(fake_bytes, "red robot", out_dir=td)
+            with open(p, "rb") as f:
+                assert f.read() == fake_bytes
+            # cleanup default outputs file created by run()
+            try:
+                import os
+                os.remove(out["file"])
+            except Exception:
+                pass
+        print("image_maker OK")
+    finally:
+        requests.post = orig_post
+        im.limiter.wait = orig_wait
+        import config as cfg
+        cfg.NVIDIA_API_KEY = orig_key
+
+
 if __name__ == "__main__":
     test_extract_json()
     test_registry()
@@ -213,4 +277,5 @@ if __name__ == "__main__":
     test_retry_on_overload()
     test_memory_roundtrip()
     test_router_uses_memory()
+    test_image_maker_mocked()
     print("ALL OFFLINE TESTS PASSED")
