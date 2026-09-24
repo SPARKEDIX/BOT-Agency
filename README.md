@@ -25,6 +25,10 @@ REPL: `/help /agents /model /auto /direct /agency /stream /memory [clear] /clear
 - Tool 1: ScrapeGraphAI `SmartScraperGraph` on NIM endpoint; Tool 2 fallback: Playwright chromium → page text → NIM summary.
 - Router auto-picks `scraper` for URL tasks. `pip install scrapegraphai` + `py -m playwright install chromium` required for full path.
 
+## YouTube-scraper bot
+- `agency/yt_scraper.py` — model `poolside/laguna-xs-2.1` (`YT_SCRAPER_MODEL`, override `WORKER_MODEL_YT_SCRAPER`).
+- Playwright fetch (channel/video/search, no new deps) → NIM summary. Router auto-picks `yt_scraper` for YouTube work.
+
 ## How it works
 - `agency/main_agent.py` (boss) routes chat vs task, plans 1-4 JSON subtasks, then synthesizes.
 - `agency/worker.py` + `agency/registry.py` (researcher/coder/writer/reviewer/scraper) run via same NIM endpoint.

@@ -17,6 +17,12 @@ class WorkerAgent:
             return ScraperAgent(model=self.model).run(
                 instruction, context=context, stream_output=stream_output, on_retry=on_retry
             )
+        if self.role == "yt_scraper":
+            from agency.yt_scraper import YTScraperAgent
+
+            return YTScraperAgent(model=self.model).run(
+                instruction, context=context, stream_output=stream_output, on_retry=on_retry
+            )
         if self.role == "image_maker":
             from agency.image_maker import ImageMakerAgent
 

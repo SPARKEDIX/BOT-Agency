@@ -1,7 +1,7 @@
 """Agent ecosystem. NIM models via one key + one endpoint.
 
 Default worker model = MAIN_MODEL so you don't need extra entitlements.
-Scraper defaults to meta/muse-glimmer-30b.
+Scraper defaults to meta/muse-glimmer-30b, YT scraper to poolside/laguna-xs-2.1.
 Override per-agent with e.g. WORKER_MODEL_CODER=nvidia/llama-3.1-nemotron-70b-instruct
 """
 import os
@@ -33,6 +33,10 @@ AGENTS: dict[str, dict] = {
         "description": "Fetches website content via ScrapeGraphAI + Playwright, then summarizes.",
         "system": "You are a web-scraper agent. Extract the key facts from fetched page content. Return URL, title points, and concise summary.",
     },
+    "yt_scraper": {
+        "description": "Scrapes YouTube channels/videos/search via Playwright, then summarizes.",
+        "system": "You are a YouTube-scraper bot. Extract channel stats, video titles, views, dates, and key points from fetched YouTube page text. Return URL, stats, and concise bullet summary.",
+    },
     "image_maker": {
         "description": "Generates images via FLUX.1-schnell, saves JPG to ./outputs.",
         "system": "You are an image-generation agent. Turn the task into a vivid image prompt and report the saved file path.",
@@ -42,6 +46,7 @@ AGENTS: dict[str, dict] = {
 # per-role model defaults (env override wins)
 ROLE_DEFAULT_MODEL: dict[str, str] = {
     "scraper": config.SCRAPER_MODEL,
+    "yt_scraper": config.YT_SCRAPER_MODEL,
     "coding": config.CODING_MODEL,
     "image_maker": config.IMAGE_MODEL,
 }

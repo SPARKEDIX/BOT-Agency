@@ -13,6 +13,9 @@ MAIN_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 # Web-scraper agent model (NIM id)
 SCRAPER_MODEL = os.getenv("SCRAPER_MODEL", "meta/muse-glimmer-30b")
 
+# YouTube-scraper bot model (NIM id)
+YT_SCRAPER_MODEL = os.getenv("YT_SCRAPER_MODEL", "poolside/laguna-xs-2.1")
+
 # Coding agent model (NIM id)
 CODING_MODEL = os.getenv("CODING_MODEL", "google/gemma-4-31b-it")
 

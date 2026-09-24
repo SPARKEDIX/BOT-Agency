@@ -13,9 +13,10 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "image_maker"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == "poolside/laguna-xs-2.1"
     assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
     print("registry OK:", list(registry.AGENTS))
 
@@ -109,6 +110,31 @@ def test_scraper_agent_mocked():
         print("scraper OK")
     finally:
         nc.chat, sc.smart_scrape, sc.fetch_playwright = orig_chat, orig_smart, orig_fetch
+
+
+def test_yt_scraper_agent_mocked():
+    """YT scraper: target resolution + fetch + NIM summary (all mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.yt_scraper as yt
+
+    assert yt.resolve_targets("Check https://www.youtube.com/@SPARKEDIX stats") == [
+        "https://www.youtube.com/@SPARKEDIX"]
+    assert yt.resolve_targets("Find @SomeChannel videos")[0] == "https://www.youtube.com/@SomeChannel"
+    assert yt.resolve_targets("funny cats")[0].startswith("https://www.youtube.com/results?search_query=")
+
+    orig_chat, orig_fetch = nc.chat, yt.fetch_playwright
+    nc.chat = lambda messages, model, **kw: {"content": "yt-summary", "reasoning": ""}
+    yt.fetch_playwright = lambda url, timeout_ms=30000: "Sparkedix 815 subscribers 208 videos"
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("yt_scraper").run("Summarize https://www.youtube.com/@SPARKEDIX", stream_output=False)
+        assert out["role"] == "yt_scraper", out
+        assert out["model"] == "poolside/laguna-xs-2.1", out
+        assert "yt-summary" in out["output"], out
+        print("yt_scraper OK")
+    finally:
+        nc.chat, yt.fetch_playwright = orig_chat, orig_fetch
 
 
 def test_retry_on_overload():
@@ -274,6 +300,7 @@ if __name__ == "__main__":
     test_smart_chat_path()
     test_parse_router()
     test_scraper_agent_mocked()
+    test_yt_scraper_agent_mocked()
     test_retry_on_overload()
     test_memory_roundtrip()
     test_router_uses_memory()
