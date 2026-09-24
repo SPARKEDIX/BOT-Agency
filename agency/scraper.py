@@ -11,6 +11,7 @@ import re
 
 import config
 from agency import nim_client, registry
+from agency.agent_memory import AgentMemoryMixin
 
 URL_RE = re.compile(r"https?://[^\s\"'<>]+", re.I)
 MAX_URLS = 3
@@ -68,14 +69,18 @@ def smart_scrape(url: str, prompt: str) -> str | None:
         return None
 
 
-class ScraperAgent:
-    def __init__(self, model: str | None = None):
+class ScraperAgent(AgentMemoryMixin):
+    def __init__(self, model: str | None = None, memory=None, use_memory: bool = True):
         self.role = "scraper"
         self.model = model or registry.model_for("scraper")
         self.system = registry.AGENTS["scraper"]["system"]
+        self._memory = memory
+        self.use_memory = use_memory
 
     def run(self, instruction: str, context: str = "", stream_output: bool = False, on_retry=None) -> dict:
         urls = extract_urls((context or "") + "\n" + (instruction or ""))
+        snippet = self._recall(instruction)
+        mem_ctx = f"\n\nRelevant past memory:\n{snippet}" if snippet else ""
         if not urls:
             res = nim_client.chat(
                 messages=[
@@ -90,6 +95,7 @@ class ScraperAgent:
                 stream_output=stream_output,
                 on_retry=on_retry,
             )
+            self._store(self.role, instruction, res["content"])
             return {"role": self.role, "model": self.model, "output": res["content"]}
 
         parts: list[str] = []
@@ -106,7 +112,7 @@ class ScraperAgent:
             summary = nim_client.chat(
                 messages=[
                     {"role": "system", "content": self.system},
-                    {"role": "user", "content": f"URL: {url}\nFetched via {source}:\n{raw[:MAX_CHARS]}\n\nTask:\n{instruction}"},
+                    {"role": "user", "content": f"URL: {url}\nFetched via {source}:\n{raw[:MAX_CHARS]}\n\nTask:\n{instruction}{mem_ctx}"},
                 ],
                 model=self.model,
                 temperature=0.3,
@@ -117,4 +123,6 @@ class ScraperAgent:
                 on_retry=on_retry,
             )
             parts.append(f"URL: {url}\n{summary['content']}")
-        return {"role": self.role, "model": self.model, "output": "\n\n---\n\n".join(parts)}
+        final = "\n\n---\n\n".join(parts)
+        self._store(self.role, instruction, final)
+        return {"role": self.role, "model": self.model, "output": final}

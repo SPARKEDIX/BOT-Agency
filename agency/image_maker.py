@@ -17,6 +17,7 @@ import re
 import time
 
 import config
+from agency.agent_memory import AgentMemoryMixin
 from agency.rate_limiter import limiter
 
 INVOKE_URL = os.getenv(
@@ -145,10 +146,12 @@ def save_image(img_bytes: bytes, prompt: str, out_dir: str | None = None) -> str
     return path
 
 
-class ImageMakerAgent:
-    def __init__(self, model: str | None = None):
+class ImageMakerAgent(AgentMemoryMixin):
+    def __init__(self, model: str | None = None, memory=None, use_memory: bool = True):
         self.role = "image_maker"
         self.model = model or MODEL_ID
+        self._memory = memory
+        self.use_memory = use_memory
 
     def run(self, instruction: str, context: str = "", stream_output: bool = False, on_retry=None) -> dict:
         prompt = build_prompt(instruction, context)
@@ -165,4 +168,5 @@ class ImageMakerAgent:
             f"Size: {width}x{height} | steps={steps} | seed={used_seed}\n"
             f"Saved to: {path}"
         )
+        self._store(self.role, instruction, text)  # recall skipped: diffusion prompts stay clean
         return {"role": self.role, "model": self.model, "output": text, "file": path}

@@ -41,6 +41,14 @@ AGENTS: dict[str, dict] = {
         "description": "Finds and qualifies sales leads from an ICP; returns scored lead lists.",
         "system": "You are a lead-generation agent. From the target ICP and any fetched context, return a scored lead list as a markdown table: Name | Title | Company | Contact hint | Source | Score (1-10) | Why. Only real, verifiable entities — never invent emails or phone numbers; mark unknowns as 'unknown'. End with 3 suggested next actions.",
     },
+    "marketing": {
+        "description": "Researches a product and its competitors; returns brief + comparison.",
+        "system": "You are a marketing-research agent. From the product info and fetched pages, return: 1) Product brief (what it is, key features, pricing if found, audience). 2) Competitor table: Competitor | Key features | Pricing hint | Differentiator vs product. 3) 3 positioning angles. Only use fetched/verified facts — mark unknowns as 'unknown', never invent pricing or features.",
+    },
+    "url_data": {
+        "description": "Turns any URL into structured data: tables, lists, or JSON.",
+        "system": "You are a URL-to-data agent. From fetched page text, extract exactly what the task asks as structured data: markdown tables, bullet lists, or JSON. Preserve numbers/dates verbatim, drop nav/ads/cookie text. If a field is absent on the page, write 'unknown' — never invent values.",
+    },
     "image_maker": {
         "description": "Generates images via FLUX.1-schnell, saves JPG to ./outputs.",
         "system": "You are an image-generation agent. Turn the task into a vivid image prompt and report the saved file path.",
@@ -52,7 +60,8 @@ ROLE_DEFAULT_MODEL: dict[str, str] = {
     "scraper": config.SCRAPER_MODEL,
     "yt_scraper": config.YT_SCRAPER_MODEL,
     "lead_gen": config.LEAD_MODEL,
-    "coding": config.CODING_MODEL,
+    "marketing": config.MARKETING_MODEL,
+    "url_data": config.URL_DATA_MODEL,    "coding": config.CODING_MODEL,
     "image_maker": config.IMAGE_MODEL,
 }
 

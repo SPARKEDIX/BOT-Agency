@@ -13,9 +13,11 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "image_maker"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("url_data") == config.URL_DATA_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("marketing") == config.MARKETING_MODEL == "meta/muse-glimmer-30b"
     assert registry.model_for("lead_gen") == config.LEAD_MODEL == "google/gemma-4-31b-it"
     assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == "poolside/laguna-xs-2.1"
     assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
@@ -104,7 +106,7 @@ def test_scraper_agent_mocked():
     try:
         from agency.worker import WorkerAgent
 
-        out = WorkerAgent("scraper").run("Summarize https://example.com", stream_output=False)
+        out = WorkerAgent("scraper", use_memory=False).run("Summarize https://example.com", stream_output=False)
         assert out["role"] == "scraper", out
         assert out["model"] == "meta/muse-glimmer-30b", out
         assert "https://example.com" in out["output"], out
@@ -129,7 +131,7 @@ def test_yt_scraper_agent_mocked():
     try:
         from agency.worker import WorkerAgent
 
-        out = WorkerAgent("yt_scraper").run("Summarize https://www.youtube.com/@SPARKEDIX", stream_output=False)
+        out = WorkerAgent("yt_scraper", use_memory=False).run("Summarize https://www.youtube.com/@SPARKEDIX", stream_output=False)
         assert out["role"] == "yt_scraper", out
         assert out["model"] == "poolside/laguna-xs-2.1", out
         assert "yt-summary" in out["output"], out
@@ -150,7 +152,7 @@ def test_lead_gen_agent_mocked():
     try:
         from agency.worker import WorkerAgent
 
-        out = WorkerAgent("lead_gen").run("Find AI automation agencies in india", stream_output=False)
+        out = WorkerAgent("lead_gen", use_memory=False).run("Find AI automation agencies in india", stream_output=False)
         assert out["role"] == "lead_gen", out
         assert out["model"] == "google/gemma-4-31b-it", out
         assert seen["model"] == "google/gemma-4-31b-it", seen
@@ -158,6 +160,50 @@ def test_lead_gen_agent_mocked():
         print("lead_gen OK")
     finally:
         nc.chat, lg.fetch_playwright = orig_chat, orig_fetch
+
+
+def test_marketing_agent_mocked():
+    """Marketing: brief + competitor table via muse-glimmer (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.marketing as mk
+
+    orig_chat, orig_fetch = nc.chat, mk.fetch_playwright
+    seen = {}
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model), {"content": "Brief: Acme CRM. | RivalCo | x | y |", "reasoning": ""})[1]
+    mk.fetch_playwright = lambda url, timeout_ms=30000: (_ for _ in ()).throw(AssertionError("no fetch expected"))
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("marketing", use_memory=False).run("Research Acme CRM and competitors", stream_output=False)
+        assert out["role"] == "marketing", out
+        assert out["model"] == "meta/muse-glimmer-30b", out
+        assert seen["model"] == "meta/muse-glimmer-30b", seen
+        assert "Acme" in out["output"], out
+        print("marketing OK")
+    finally:
+        nc.chat, mk.fetch_playwright = orig_chat, orig_fetch
+
+
+def test_url_data_agent_mocked():
+    """URL-to-data: fetch + structured extract (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.url_data as ud
+
+    orig_chat, orig_fetch = nc.chat, ud.fetch_playwright
+    seen = {}
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model), {"content": "| Price | $9 |", "reasoning": ""})[1]
+    ud.fetch_playwright = lambda url, timeout_ms=30000: "Pricing page: Basic $9"
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("url_data", use_memory=False).run("Extract pricing from https://example.com/pricing", stream_output=False)
+        assert out["role"] == "url_data", out
+        assert out["model"] == "meta/muse-glimmer-30b", out
+        assert seen["model"] == "meta/muse-glimmer-30b", seen
+        assert "$9" in out["output"], out
+        print("url_data OK")
+    finally:
+        nc.chat, ud.fetch_playwright = orig_chat, orig_fetch
 
 
 def test_retry_on_overload():
@@ -292,7 +338,7 @@ def test_image_maker_mocked():
         requests.post = fake_post
         im.limiter.wait = lambda: 0
         with tempfile.TemporaryDirectory() as td:
-            out = im.ImageMakerAgent().run("Generate an image of a red robot, landscape")
+            out = im.ImageMakerAgent(use_memory=False).run("Generate an image of a red robot, landscape")
             # rerun save path check via returned file? run saves to ./outputs; check output text
             assert out["role"] == "image_maker", out
             assert "Saved to:" in out["output"], out
@@ -315,6 +361,146 @@ def test_image_maker_mocked():
         cfg.NVIDIA_API_KEY = orig_key
 
 
+def test_pipeline_security():
+    """SSRF guard, secret redaction, unsafe-task filter."""
+    from agency.pipeline import is_safe_url, redact_secrets, sanitize_text, split_tasks
+
+    assert is_safe_url("https://example.com/page")
+    for bad in ["file:///etc/passwd", "http://localhost:8000/x", "http://127.0.0.1/",
+                "http://169.254.169.254/latest", "http://10.0.0.5/", "http://192.168.1.1/",
+                "ftp://example.com/f", "https://user:pass@example.com/"]:
+        assert not is_safe_url(bad), bad
+    assert "[REDACTED]" in redact_secrets("key=nvapi-abc123XYZ456 here")
+    assert "[REDACTED]" in redact_secrets("Authorization: Bearer sometoken123")
+    assert len(sanitize_text("x" * 9000)) == 4000
+    ok, blocked = split_tasks([{"id": 1, "agent": "scraper", "instruction": "fetch https://example.com"},
+                               {"id": 2, "agent": "scraper", "instruction": "fetch http://169.254.169.254/"}])
+    assert len(ok) == 1 and len(blocked) == 1, (ok, blocked)
+    print("pipeline_security OK")
+
+
+def test_pipeline_chat():
+    """Chat goal: 1 router call, no workers, traced."""
+    import agency.nim_client as nc
+    from agency.pipeline import run_pipeline
+
+    orig = nc.chat
+    nc.chat = lambda messages, model, **kw: {"content": '{"type":"chat","reply":"hi there"}', "reasoning": ""}
+    try:
+        out = run_pipeline("hello", boss=MainAgent(use_memory=False))
+        assert out["mode"] == "chat" and out["final"] == "hi there", out
+        assert any("router" in t for t in out["trace"]) and any("chat_answer" in t for t in out["trace"])
+        assert out["results"] == []
+        print("pipeline_chat OK")
+    finally:
+        nc.chat = orig
+
+
+def _fake_worker_factory(seen, fail_on=()):
+    import agency.worker as wmod
+
+    class FakeWorker:
+        def __init__(self, role):
+            self.role = role
+
+        def run(self, instruction, context="", stream_output=False, on_retry=None):
+            seen.append({"role": self.role, "instruction": instruction, "context": context})
+            if self.role in fail_on:
+                raise RuntimeError("boom")
+            return {"role": self.role, "model": "fake", "output": f"out-{self.role}"}
+
+    return wmod, FakeWorker
+
+
+def test_pipeline_task_handoff():
+    """Task goal: workers run in order, each sees prior outputs (blackboard)."""
+    import agency.nim_client as nc
+    from agency.pipeline import run_pipeline
+
+    def fake_chat(messages, model, **kw):
+        if "BOSS router" in messages[0]["content"]:
+            return {"content": '{"type":"task","tasks":[{"id":1,"agent":"researcher","instruction":"find X"},{"id":2,"agent":"writer","instruction":"write X"}]}', "reasoning": ""}
+        return {"content": "FINAL", "reasoning": ""}
+
+    seen: list[dict] = []
+    wmod, FakeWorker = _fake_worker_factory(seen)
+    orig_chat, orig_worker = nc.chat, wmod.WorkerAgent
+    nc.chat, wmod.WorkerAgent = fake_chat, FakeWorker
+    try:
+        out = run_pipeline("do X", boss=MainAgent(use_memory=False))
+        assert out["mode"] == "task" and out["final"] == "FINAL", out
+        assert [r["role"] for r in out["results"]] == ["researcher", "writer"], out["results"]
+        assert "out-researcher" in seen[1]["context"], seen[1]  # handoff proof
+        assert any("worker" in t for t in out["trace"]) and any("synth" in t for t in out["trace"])
+        print("pipeline_handoff OK")
+    finally:
+        nc.chat, wmod.WorkerAgent = orig_chat, orig_worker
+
+
+def test_pipeline_error_isolation():
+    """Failing worker is isolated: rest run, synthesis still happens."""
+    import agency.nim_client as nc
+    from agency.pipeline import run_pipeline
+
+    def fake_chat(messages, model, **kw):
+        if "BOSS router" in messages[0]["content"]:
+            return {"content": '{"type":"task","tasks":[{"id":1,"agent":"researcher","instruction":"find X"},{"id":2,"agent":"writer","instruction":"write X"}]}', "reasoning": ""}
+        return {"content": "FINAL", "reasoning": ""}
+
+    seen: list[dict] = []
+    wmod, FakeWorker = _fake_worker_factory(seen, fail_on=("researcher",))
+    orig_chat, orig_worker = nc.chat, wmod.WorkerAgent
+    nc.chat, wmod.WorkerAgent = fake_chat, FakeWorker
+    try:
+        out = run_pipeline("do X", boss=MainAgent(use_memory=False))
+        assert out["final"] == "FINAL", out
+        assert any("researcher" in e for e in out["errors"]), out["errors"]
+        assert any("FAILED isolated" in t for t in out["trace"]), out["trace"]
+        print("pipeline_isolation OK")
+    finally:
+        nc.chat, wmod.WorkerAgent = orig_chat, orig_worker
+
+
+def test_all_agents_memory():
+    """Every agent recalls past memory into prompts and stores its output."""
+    import agency.nim_client as nc
+    from agency.worker import WorkerAgent
+
+    class FakeMem:
+        enabled = True
+
+        def __init__(self):
+            self.stored: list[dict] = []
+
+        def recall_context(self, q):
+            return "past aurora notes"
+
+        def add(self, text, kind="worker", **meta):
+            self.stored.append({"text": text, "kind": kind, **meta})
+            return "id1"
+
+    seen: dict = {}
+    orig = nc.chat
+    nc.chat = lambda messages, model, **kw: (seen.update(prompt=messages[1]["content"]), {"content": "done", "reasoning": ""})[1]
+    try:
+        mem = FakeMem()
+        out = WorkerAgent("writer", memory=mem).run("write about aurora")
+        assert out["output"] == "done"
+        assert "past aurora notes" in seen["prompt"], seen["prompt"][:200]
+        assert len(mem.stored) == 1 and mem.stored[0]["role"] == "writer", mem.stored
+
+        from agency.lead_gen import LeadGenAgent
+
+        mem2 = FakeMem()
+        out = LeadGenAgent(memory=mem2).run("Find leads")
+        assert out["output"] == "done"
+        assert "past aurora notes" in seen["prompt"], seen["prompt"][:200]
+        assert len(mem2.stored) == 1 and mem2.stored[0]["role"] == "lead_gen", mem2.stored
+        print("all_agents_memory OK")
+    finally:
+        nc.chat = orig
+
+
 if __name__ == "__main__":
     test_extract_json()
     test_registry()
@@ -325,6 +511,13 @@ if __name__ == "__main__":
     test_scraper_agent_mocked()
     test_yt_scraper_agent_mocked()
     test_lead_gen_agent_mocked()
+    test_marketing_agent_mocked()
+    test_url_data_agent_mocked()
+    test_pipeline_security()
+    test_pipeline_chat()
+    test_pipeline_task_handoff()
+    test_pipeline_error_isolation()
+    test_all_agents_memory()
     test_retry_on_overload()
     test_memory_roundtrip()
     test_router_uses_memory()

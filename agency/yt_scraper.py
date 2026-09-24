@@ -12,6 +12,7 @@ import urllib.parse
 
 import config
 from agency import nim_client, registry
+from agency.agent_memory import AgentMemoryMixin
 from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
 
 MAX_URLS = 3
@@ -37,14 +38,18 @@ def resolve_targets(instruction: str, context: str = "") -> list[str]:
     return targets[:MAX_URLS]
 
 
-class YTScraperAgent:
-    def __init__(self, model: str | None = None):
+class YTScraperAgent(AgentMemoryMixin):
+    def __init__(self, model: str | None = None, memory=None, use_memory: bool = True):
         self.role = "yt_scraper"
         self.model = model or registry.model_for("yt_scraper")
         self.system = registry.AGENTS["yt_scraper"]["system"]
+        self._memory = memory
+        self.use_memory = use_memory
 
     def run(self, instruction: str, context: str = "", stream_output: bool = False, on_retry=None) -> dict:
         targets = resolve_targets(instruction, context)
+        snippet = self._recall(instruction)
+        mem_ctx = f"\n\nRelevant past memory:\n{snippet}" if snippet else ""
         parts: list[str] = []
         for url in targets:
             try:
@@ -59,7 +64,7 @@ class YTScraperAgent:
             summary = nim_client.chat(
                 messages=[
                     {"role": "system", "content": self.system},
-                    {"role": "user", "content": f"URL: {url}\nFetched via {source}:\n{raw[:MAX_CHARS]}\n\nTask:\n{instruction}"},
+                    {"role": "user", "content": f"URL: {url}\nFetched via {source}:\n{raw[:MAX_CHARS]}\n\nTask:\n{instruction}{mem_ctx}"},
                 ],
                 model=self.model,
                 temperature=0.3,
@@ -70,4 +75,6 @@ class YTScraperAgent:
                 on_retry=on_retry,
             )
             parts.append(f"URL: {url}\n{summary['content']}")
-        return {"role": self.role, "model": self.model, "output": "\n\n---\n\n".join(parts)}
+        final = "\n\n---\n\n".join(parts)
+        self._store(self.role, instruction, final)
+        return {"role": self.role, "model": self.model, "output": final}

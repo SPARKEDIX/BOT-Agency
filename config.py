@@ -22,6 +22,12 @@ CODING_MODEL = os.getenv("CODING_MODEL", "google/gemma-4-31b-it")
 # Lead-generation agent model (NIM id)
 LEAD_MODEL = os.getenv("LEAD_MODEL", "google/gemma-4-31b-it")
 
+# Marketing agent model (NIM id)
+MARKETING_MODEL = os.getenv("MARKETING_MODEL", "meta/muse-glimmer-30b")
+
+# URL-to-data scraper agent model (NIM id)
+URL_DATA_MODEL = os.getenv("URL_DATA_MODEL", "meta/muse-glimmer-30b")
+
 # Image generation (NVIDIA Cloud, not integrate endpoint)
 IMAGE_MODEL = "black-forest-labs/flux.1-schnell"
 IMAGE_URL = os.getenv(

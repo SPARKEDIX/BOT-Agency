@@ -6,7 +6,7 @@ Single-shot:
   py main.py --interactive   (force REPL)
 
 REPL slash commands:
-  /help /agents /model /auto /direct /agency /stream /clear /quit
+  /help /agents /model /auto /direct /agency /pipeline /stream /memory /clear /quit
 """
 import argparse
 import shutil
@@ -54,6 +54,7 @@ def show_help() -> None:
     t.add_row("/auto", "Smart mode (default): chat replies directly, tasks split to agents")
     t.add_row("/direct", "Force single boss call (1 request, best when NIM is busy)")
     t.add_row("/agency", "Force full agency (plan → workers → synthesize)")
+    t.add_row("/pipeline", "Secure LangGraph run (blackboard, trace, guards)")
     t.add_row("/stream", "Toggle token streaming on/off")
     t.add_row("/memory [clear]", "Show Chroma docs count, or wipe memory")
     t.add_row("/clear", "Clear screen")
@@ -154,12 +155,31 @@ def run_agency(goal: str, boss: MainAgent, history: list[dict], stream: bool) ->
     return final["content"]
 
 
+def run_pipeline_mode(goal: str, boss: MainAgent, history: list[dict]) -> str:
+    """Secure LangGraph run: shared blackboard, traced, fail-closed."""
+    from agency.pipeline import run_pipeline
+
+    with console.status("[cyan]Pipeline running… (router → agents → synth)[/]", spinner="dots"):
+        out = run_pipeline(goal, history=history, boss=boss, on_retry=_on_retry)
+    if out["trace"]:
+        console.print(Panel("\n".join(f"[dim]•[/] {t}" for t in out["trace"]),
+                            title="pipeline trace", border_style="cyan"))
+    if out["errors"]:
+        console.print(Panel("\n".join(f"[yellow]•[/] {e}" for e in out["errors"]),
+                            title="blocked / failed (isolated)", border_style="yellow"))
+    title = {"chat": "boss answer", "task": "final answer"}.get(out["mode"], "pipeline error")
+    console.print(Panel(Markdown(out["final"] or "_empty response_"), title=title, border_style="green"))
+    return out["final"]
+
+
 def handle_goal(goal: str, boss: MainAgent, mode: str, history: list[dict], stream: bool) -> None:
     try:
         if mode == "direct":
             reply = run_direct(goal, boss, history, stream)
         elif mode == "agency":
             reply = run_agency(goal, boss, history, stream)
+        elif mode == "pipeline":
+            reply = run_pipeline_mode(goal, boss, history)
         else:  # auto/smart (default)
             reply = run_auto(goal, boss, history, stream)
         history.append({"role": "user", "content": goal})
@@ -222,6 +242,9 @@ def repl(boss: MainAgent, mode: str, stream: bool) -> int:
             elif cmd == "/agency":
                 mode = "agency"
                 console.print("[green]Mode → agency (forced plan → workers → synthesize)[/]")
+            elif cmd == "/pipeline":
+                mode = "pipeline"
+                console.print("[green]Mode → pipeline (secure LangGraph: blackboard + trace)[/]")
             elif cmd == "/stream":
                 stream = not stream
                 console.print(f"[green]Stream → {'on' if stream else 'off'}[/]")
@@ -243,6 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("goal", nargs="*", help="Goal to run once (empty = interactive REPL)")
     p.add_argument("--direct", action="store_true", help="Force single boss call (1 request)")
     p.add_argument("--agency", action="store_true", help="Force full agency run")
+    p.add_argument("--pipeline", action="store_true", help="Secure LangGraph pipeline run")
     p.add_argument("--no-stream", action="store_true", help="Disable streaming")
     p.add_argument("--interactive", "-i", action="store_true", help="Force REPL after single-shot")
     p.add_argument("--model", default=config.MAIN_MODEL, help="Boss NIM model id")
@@ -250,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--debug", action="store_true", help="Show full tracebacks")
     args = p.parse_args(argv)
 
-    mode = "direct" if args.direct else "agency" if args.agency else "auto"
+    mode = "direct" if args.direct else "agency" if args.agency else "pipeline" if args.pipeline else "auto"
     stream = not args.no_stream
     boss = MainAgent(model=args.model, use_memory=not args.no_memory)
     goal = " ".join(args.goal).strip()

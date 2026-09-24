@@ -1,25 +1,24 @@
-"""Lead-generation agent: google/gemma-4-31b-it + optional web evidence.
+"""Marketing agent: meta/muse-glimmer-30b + web evidence.
 
 Pipeline:
-  1. If the task contains URLs, fetch them via scraper helpers (Playwright).
-  2. One NIM call (gemma) turns ICP + evidence into a scored lead table.
-No invented contacts: unknowns are marked 'unknown'.
+  1. Fetch product/competitor URLs from the task via scraper helpers (Playwright).
+  2. One NIM call turns product info + pages into a product brief,
+     competitor table, and positioning angles. No invented facts.
 """
 from __future__ import annotations
 
-import config
 from agency import nim_client, registry
 from agency.agent_memory import AgentMemoryMixin
 from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
 
-MAX_URLS = 3
+MAX_URLS = 4
 
 
-class LeadGenAgent(AgentMemoryMixin):
+class MarketingAgent(AgentMemoryMixin):
     def __init__(self, model: str | None = None, memory=None, use_memory: bool = True):
-        self.role = "lead_gen"
-        self.model = model or registry.model_for("lead_gen")
-        self.system = registry.AGENTS["lead_gen"]["system"]
+        self.role = "marketing"
+        self.model = model or registry.model_for("marketing")
+        self.system = registry.AGENTS["marketing"]["system"]
         self._memory = memory
         self.use_memory = use_memory
 
@@ -29,14 +28,16 @@ class LeadGenAgent(AgentMemoryMixin):
         evidence: list[str] = []
         for url in urls:
             try:
-                evidence.append(f"Source {url}:\n{fetch_playwright(url)[:4000]}")
+                evidence.append(f"Page {url}:\n{fetch_playwright(url)[:4000]}")
             except Exception as e:  # noqa: BLE001
-                evidence.append(f"Source {url}: fetch failed ({e})")
+                evidence.append(f"Page {url}: fetch failed ({e})")
         user = f"Task:\n{instruction}"
         if context:
             user += f"\n\nContext:\n{context}"
         if evidence:
-            user += "\n\nWeb evidence:\n" + "\n---\n".join(evidence)
+            user += "\n\nFetched pages:\n" + "\n---\n".join(evidence)
+        else:
+            user += "\n\n(No product URLs fetched — work from the task description and mark unfound facts 'unknown'.)"
         snippet = self._recall(instruction)
         if snippet:
             user += f"\n\nRelevant past memory:\n{snippet}"

@@ -3,5 +3,6 @@ python-dotenv>=1.0.0
 requests>=2.31.0
 rich>=13.0.0
 chromadb>=0.4.0
+langgraph>=1.0
 scrapegraphai>=1.0.0
 playwright>=1.40.0
