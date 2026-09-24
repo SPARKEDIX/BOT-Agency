@@ -23,6 +23,12 @@ class WorkerAgent:
             return YTScraperAgent(model=self.model).run(
                 instruction, context=context, stream_output=stream_output, on_retry=on_retry
             )
+        if self.role == "lead_gen":
+            from agency.lead_gen import LeadGenAgent
+
+            return LeadGenAgent(model=self.model).run(
+                instruction, context=context, stream_output=stream_output, on_retry=on_retry
+            )
         if self.role == "image_maker":
             from agency.image_maker import ImageMakerAgent
 

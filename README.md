@@ -29,6 +29,10 @@ REPL: `/help /agents /model /auto /direct /agency /stream /memory [clear] /clear
 - `agency/yt_scraper.py` — model `poolside/laguna-xs-2.1` (`YT_SCRAPER_MODEL`, override `WORKER_MODEL_YT_SCRAPER`).
 - Playwright fetch (channel/video/search, no new deps) → NIM summary. Router auto-picks `yt_scraper` for YouTube work.
 
+## Lead-generation agent
+- `agency/lead_gen.py` — model `google/gemma-4-31b-it` (`LEAD_MODEL`, override `WORKER_MODEL_LEAD_GEN`).
+- Optional URL evidence via Playwright → one gemma call returns scored lead table. Never invents contacts. Router auto-picks `lead_gen` for leads/prospects.
+
 ## How it works
 - `agency/main_agent.py` (boss) routes chat vs task, plans 1-4 JSON subtasks, then synthesizes.
 - `agency/worker.py` + `agency/registry.py` (researcher/coder/writer/reviewer/scraper) run via same NIM endpoint.

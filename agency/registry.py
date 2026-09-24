@@ -37,6 +37,10 @@ AGENTS: dict[str, dict] = {
         "description": "Scrapes YouTube channels/videos/search via Playwright, then summarizes.",
         "system": "You are a YouTube-scraper bot. Extract channel stats, video titles, views, dates, and key points from fetched YouTube page text. Return URL, stats, and concise bullet summary.",
     },
+    "lead_gen": {
+        "description": "Finds and qualifies sales leads from an ICP; returns scored lead lists.",
+        "system": "You are a lead-generation agent. From the target ICP and any fetched context, return a scored lead list as a markdown table: Name | Title | Company | Contact hint | Source | Score (1-10) | Why. Only real, verifiable entities — never invent emails or phone numbers; mark unknowns as 'unknown'. End with 3 suggested next actions.",
+    },
     "image_maker": {
         "description": "Generates images via FLUX.1-schnell, saves JPG to ./outputs.",
         "system": "You are an image-generation agent. Turn the task into a vivid image prompt and report the saved file path.",
@@ -47,6 +51,7 @@ AGENTS: dict[str, dict] = {
 ROLE_DEFAULT_MODEL: dict[str, str] = {
     "scraper": config.SCRAPER_MODEL,
     "yt_scraper": config.YT_SCRAPER_MODEL,
+    "lead_gen": config.LEAD_MODEL,
     "coding": config.CODING_MODEL,
     "image_maker": config.IMAGE_MODEL,
 }

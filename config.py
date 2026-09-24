@@ -19,6 +19,9 @@ YT_SCRAPER_MODEL = os.getenv("YT_SCRAPER_MODEL", "poolside/laguna-xs-2.1")
 # Coding agent model (NIM id)
 CODING_MODEL = os.getenv("CODING_MODEL", "google/gemma-4-31b-it")
 
+# Lead-generation agent model (NIM id)
+LEAD_MODEL = os.getenv("LEAD_MODEL", "google/gemma-4-31b-it")
+
 # Image generation (NVIDIA Cloud, not integrate endpoint)
 IMAGE_MODEL = "black-forest-labs/flux.1-schnell"
 IMAGE_URL = os.getenv(

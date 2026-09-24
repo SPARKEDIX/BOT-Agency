@@ -13,9 +13,10 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "image_maker"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("lead_gen") == config.LEAD_MODEL == "google/gemma-4-31b-it"
     assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == "poolside/laguna-xs-2.1"
     assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
     print("registry OK:", list(registry.AGENTS))
@@ -135,6 +136,28 @@ def test_yt_scraper_agent_mocked():
         print("yt_scraper OK")
     finally:
         nc.chat, yt.fetch_playwright = orig_chat, orig_fetch
+
+
+def test_lead_gen_agent_mocked():
+    """Lead gen: scored table via gemma (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.lead_gen as lg
+
+    orig_chat, orig_fetch = nc.chat, lg.fetch_playwright
+    seen = {}
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model), {"content": "| A | CEO | Acme | unknown | web | 8 | fits |", "reasoning": ""})[1]
+    lg.fetch_playwright = lambda url, timeout_ms=30000: (_ for _ in ()).throw(AssertionError("no fetch expected"))
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("lead_gen").run("Find AI automation agencies in india", stream_output=False)
+        assert out["role"] == "lead_gen", out
+        assert out["model"] == "google/gemma-4-31b-it", out
+        assert seen["model"] == "google/gemma-4-31b-it", seen
+        assert "Acme" in out["output"], out
+        print("lead_gen OK")
+    finally:
+        nc.chat, lg.fetch_playwright = orig_chat, orig_fetch
 
 
 def test_retry_on_overload():
@@ -301,6 +324,7 @@ if __name__ == "__main__":
     test_parse_router()
     test_scraper_agent_mocked()
     test_yt_scraper_agent_mocked()
+    test_lead_gen_agent_mocked()
     test_retry_on_overload()
     test_memory_roundtrip()
     test_router_uses_memory()

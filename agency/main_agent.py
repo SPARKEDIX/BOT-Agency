@@ -17,16 +17,16 @@ ROUTER_SYSTEM = """You are the BOSS router of BOT-Agency (AI Agency).
 Look at the conversation history + latest user message.
 
 - Normal chat (greeting, small talk, simple Q&A, explanation, advice, follow-up): return {"type":"chat","reply":"..."} with the FULL reply.
-- Real task (multi-step work, research + code + docs, deliverables, needs specialists): return {"type":"task","tasks":[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|image_maker","instruction":"..."}]} with 1-4 tasks.
-Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, image_maker (use scraper for any URL / fetch-website-content work, yt_scraper for YouTube channels/videos/search, coding for codegen/debugging/refactoring, image_maker for draw/generate-image/picture/photo/logo).
+- Real task (multi-step work, research + code + docs, deliverables, needs specialists): return {"type":"task","tasks":[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|lead_gen|image_maker","instruction":"..."}]} with 1-4 tasks.
+Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, lead_gen, image_maker (use scraper for any URL / fetch-website-content work, yt_scraper for YouTube channels/videos/search, lead_gen for find-leads/prospects/outreach lists, coding for codegen/debugging/refactoring, image_maker for draw/generate-image/picture/photo/logo).
 Keep task instructions self-contained (workers see no other history).
 Return ONLY JSON, no other text."""
 
 PLANNER_SYSTEM = """You are the BOSS planner of BOT-Agency.
 Decompose the user goal into 1-4 sub-tasks.
 Return ONLY a JSON array, no other text. Format:
-[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|image_maker","instruction":"..."}]
-Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, image_maker (URL / website-content work, yt_scraper for YouTube, image_maker for images).
+[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|lead_gen|image_maker","instruction":"..."}]
+Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, lead_gen, image_maker (URL / website-content work, yt_scraper for YouTube, lead_gen for leads, image_maker for images).
 Keep instructions self-contained (workers see no other history)."""
 
 SYNTH_SYSTEM = """You are the BOSS synthesizer of BOT-Agency.
