@@ -1,46 +1,38 @@
-# BOT-Agency — AI Agency
+<div align="center">
 
-A team of AI agents that chat with you and do real tasks: research, code, scrape websites & YouTube, find leads, compare competitors, extract data from URLs, and generate images. One smart **boss** model decides whether to answer directly or split the work across specialist agents.
+![BOT-Agency](assets/banner.svg)
 
-All language models run on the **NVIDIA NIM API** with a **single API key**. No OpenAI/Anthropic keys needed.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![NVIDIA NIM](https://img.shields.io/badge/NIM-NVIDIA-76b900)](https://build.nvidia.com)
+[![13 agents](https://img.shields.io/badge/agents-13-6da7ec)]()
+[![27 tests passing](https://img.shields.io/badge/tests-27_passing-brightgreen)]()
+
+**Chat with a team of AI agents that do real work — research, code, stocks, flights, leads, scraping, images.**
+One smart **boss** decides whether to answer directly or split the job across specialists. One API key. No OpenAI/Anthropic keys.
+
+[Quickstart](#-run-it-60-seconds) · [What it can do](#-what-can-it-do) · [The team](#-the-team) · [Troubleshooting](#-troubleshooting) · [How it works](#-how-it-works)
+
+</div>
 
 ---
 
-## 1. What you need
+## ⚡ Run it (60 seconds)
 
-| Requirement | Details |
-|---|---|
-| Python | 3.10 or newer (`py --version`) |
-| NVIDIA API key | Free at [build.nvidia.com](https://build.nvidia.com) → profile → API keys |
-| OS | Windows, Linux, or macOS |
-| Internet | For NIM API calls and web scraping |
-
----
-
-## 2. Setup (5 minutes)
+**1. Setup** — Python 3.10+, then:
 
 ```bash
-# 1. Get the code
 git clone https://github.com/SPARKEDIX/BOT-Agency.git
 cd BOT-Agency
-
-# 2. (Recommended) isolated environment
 py -m venv .venv
 .venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux / macOS
-
-# 3. Install everything
+# source .venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
-
-# 4. Install the browser used for scraping (one time)
-py -m playwright install chromium
-
-# 5. Add your key
+py -m playwright install chromium   # one time, for web scraping
 copy .env.example .env        # Windows
-# cp .env.example .env        # Linux / macOS
+# cp .env.example .env        # macOS / Linux
 ```
 
-Open `.env` and paste your key:
+Paste your free key (from [build.nvidia.com](https://build.nvidia.com) → profile → API keys) into `.env`:
 
 ```
 NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxx
@@ -48,35 +40,36 @@ NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxx
 
 > `.env` is git-ignored — your key never leaves your machine.
 
----
-
-## 3. Run it
+**2. Launch** — pick one:
 
 ```bash
-py backend/server.py                   # localhost frontend + API → http://127.0.0.1:8000
-py main.py                                  # interactive chat (recommended)
-py main.py "Summarize https://example.com"  # one task, then exit
-py main.py "hi, what can you do?" --direct  # single boss call, no workers
-py main.py "Research X, write code" --pipeline  # secure LangGraph run
+py backend/server.py --open     # 🌐 browser chat UI (easiest)
+py main.py                      # 💬 terminal chat
+py main.py "Analyse RELIANCE on NSE" --pipeline   # single task, secure mode
 ```
 
-Frontend (`frontend/` token-driven per `design.md`, WCAG 2.2 AA): chat + mode switch (auto/direct/agency/pipeline) + agent list + trace + memory, same-origin `/api/chat`. No new deps — stdlib server. Test offline with `py test_frontend.py`.
+> Open the printed `http://127.0.0.1:8000` URL. Do **not** double-click `frontend/index.html` — chat can't reach the backend that way.
 
-Just type normally. The boss **chats directly** for greetings and simple questions, and **splits real tasks** across agents automatically.
+---
 
-**Try these:**
+## 🎯 What can it do?
+
+Just type normally. The boss **chats directly** for greetings and **splits real tasks** across agents automatically. Copy-paste any of these:
 
 ```
-❯ hi, who are you?
-❯ Summarize https://www.youtube.com/@SPARKEDIX
-❯ Research the SPARKEDIX GitHub profile and list top repos
-❯ Find 5 AI automation agencies in india with contacts
-❯ Compare Notion vs Obsidian pricing and features
-❯ Extract the pricing table from https://example.com/pricing as JSON
-❯ Generate an image of a cat in a library
+hi, who are you?
+Track AI202 from DEL to BOM — is it delayed?
+Analyse RELIANCE on NSE with risks
+Summarize https://www.youtube.com/@SPARKEDIX
+Find 5 AI automation agencies in India with contacts
+Compare Notion vs Obsidian pricing and features
+Extract the pricing table from https://example.com/pricing as JSON
+Generate an image of a cat in a library
+Research the SPARKEDIX GitHub profile and list top repos
 ```
 
-### Modes
+<details>
+<summary><b>🧭 Modes — when to use which</b></summary>
 
 | Mode | Flag / command | What happens | NIM calls |
 |---|---|---|---|
@@ -85,9 +78,14 @@ Just type normally. The boss **chats directly** for greetings and simple questio
 | `agency` | `--agency` / `/agency` | Forced plan → workers → synthesize | up to ~6 |
 | `pipeline` | `--pipeline` / `/pipeline` | Secure LangGraph run with trace + safety guards | up to ~6 |
 
-### Chat commands
+**Tip:** if answers time out, switch to `/direct` and retry — NIM gets overloaded at peak hours.
 
-Type `/` alone to list every command, use Tab to complete, and a typo like `/agnts` suggests the closest match.
+</details>
+
+<details>
+<summary><b>⌨️ Chat commands</b></summary>
+
+Type `/` alone to list every command, Tab to complete, and a typo like `/agnts` suggests the closest match.
 
 | Command | Action |
 |---|---|
@@ -100,9 +98,11 @@ Type `/` alone to list every command, use Tab to complete, and a typo like `/agn
 | `/clear` | Clear screen |
 | `/quit` | Exit |
 
+</details>
+
 ---
 
-## 4. The team
+## 🤖 The team
 
 | Agent | Job | Model |
 |---|---|---|
@@ -116,17 +116,17 @@ Type `/` alone to list every command, use Tab to complete, and a typo like `/agn
 | `lead_gen` | ICP → scored lead table (never invents contacts) | `google/gemma-4-31b-it` |
 | `marketing` | Product URLs → brief + competitor table + angles | `meta/muse-glimmer-30b` |
 | `url_data` | Any URL → tables / lists / JSON, verbatim | `meta/muse-glimmer-30b` |
-| `trading` | India NSE/BSE analyst: price + fundamentals + technicals + risks (deep-check Yahoo/Screener) | `poolside/laguna-xs-2.1` |
-| `flight_tracker` | Live flight status: times, delays, gates (FlightAware/FR24 + Playwright) | `meta/muse-glimmer-30b` |
+| `trading` | India NSE/BSE analyst: price + fundamentals + technicals + risks | `poolside/laguna-xs-2.1` |
+| `flight_tracker` | Live flight status: times, delays, gates (FlightAware/FR24) | `meta/muse-glimmer-30b` |
 | `image_maker` | Text → JPG image via FLUX.1-schnell (`./outputs`) | `black-forest-labs/flux.1-schnell` |
 
-Every agent shares **one Chroma vector memory** (`./chroma_db`): each recalls relevant past work into its prompt and stores its result. One memory, whole agency. Disable with `--no-memory`.
+Every agent shares **one Chroma vector memory** (`./chroma_db`): each recalls relevant past work into its prompt and stores its result. Disable with `--no-memory`.
 
-Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers run sequentially, transient NIM errors auto-retry 5× with backoff.
+Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers run sequentially, transient NIM errors auto-retry 5× with backoff. The browser UI auto-retries failed multi-agent runs once as Direct.
 
 ---
 
-## 5. Configuration (`.env` / environment)
+## 🔧 Configuration (`.env` / environment)
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -138,12 +138,57 @@ Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers 
 
 ---
 
-## 6. Project layout
+## ✅ Test (no key needed)
+
+```bash
+py test_agency.py     # 23 offline checks (mocked API): routing, all agents, retries, memory, pipeline
+py test_frontend.py   # 4 offline checks: design tokens, a11y, API wiring, design.md
+```
+
+---
+
+## 🆘 Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `NVIDIA_API_KEY missing` | Put a real key in `.env` (not the `PASTE_` placeholder), restart the server |
+| `Service temporarily overloaded` / 502 | Server-side, not your code — wait 30–60 s and retry, or use `--direct` / Direct mode (1 call instead of ~6) |
+| `429 / rate limit` | 40 RPM budget hit — the limiter + retries handle it; wait a minute |
+| Browser shows "backend unreachable" | Start the server (`py backend/server.py --open`) and use the `http://127.0.0.1:…` URL — don't open the HTML file directly |
+| Chat spinner never ends | NIM can take 30–90 s on tasks; use Cancel, then retry in Direct mode |
+| Playwright `Executable doesn't exist` | Run `py -m playwright install chromium` |
+| `scrapegraphai` install fails | Optional — the scraper auto-falls-back to Playwright |
+| Empty page / login wall | Some sites block bots; the agent reports it instead of guessing |
+| Slow image generation | FLUX can take minutes when busy; check `./outputs` for the finished file |
+
+---
+
+## 🧠 How it works
+
+```mermaid
+flowchart LR
+    U[You] --> B{Boss router\n1 NIM call}
+    B -->|chat| D[Direct reply]
+    B -->|task| W[Specialist workers\nsequential, 40 RPM safe]
+    W --> S[Boss synthesizer]
+    S --> U
+    W <--> M[(Chroma memory\nshared)]
+    B <--> M
+```
+
+* **CLI** (`main.py`): Claude-style REPL + single-shot with slash commands.
+* **Browser UI** (`frontend/` + `backend/server.py`): zero-dependency localhost server, token-driven dark UI (`design.md`), Three.js ambient background, same-origin `/api/chat`.
+* **Secure mode** (`agency/pipeline.py`): LangGraph run with input sanitization, API-key redaction, SSRF URL filtering, per-agent error isolation, 10-step budget, fail-closed errors with full trace.
 
 ```
 main.py               # Claude-style CLI (REPL + single-shot)
+backend/server.py     # localhost server: serves frontend/ + /api/chat
+frontend/             # browser UI (index.html, styles.css, app.js, bg.js)
 config.py             # key, endpoint, models, budgets
-test_agency.py        # offline tests, no key needed
+design.md             # UI design tokens + component rules
+assets/banner.svg     # animated README banner
+test_agency.py        # 23 offline tests, no key needed
+test_frontend.py      # 4 offline UI tests, no key needed
 agency/
   main_agent.py       # boss: router + planner + synthesizer
   worker.py           # dispatches every role
@@ -157,30 +202,12 @@ agency/
   trading.py  flight_tracker.py  image_maker.py
 ```
 
----
-
-## 7. Test (no key needed)
-
-```bash
-py test_agency.py
-```
-
-Runs 21 offline checks with mocked API: routing, all agents, retries, memory, pipeline security/handoff/isolation.
-
----
-
-## 8. Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `NVIDIA_API_KEY missing` | Put a real key in `.env` (not the `PASTE_` placeholder) |
-| `Service temporarily overloaded` | Server-side, not your code — wait 30–60 s and retry, or use `--direct` (1 call instead of ~6) |
-| `429 / rate limit` | 40 RPM budget hit — the limiter + retries handle it; just wait a minute |
-| Playwright `Executable doesn't exist` | Run `py -m playwright install chromium` |
-| `scrapegraphai` install fails | Optional — the scraper auto-falls-back to Playwright |
-| Empty page / login wall | Some sites block bots; the agent reports it instead of guessing |
-| Slow image generation | FLUX can take minutes when busy; check `./outputs` for the finished file |
-
-## 9. Security notes
+## 🔒 Security notes
 
 The `--pipeline` mode adds: input sanitization, API-key redaction from prompts/logs/memory, SSRF URL filtering (blocks localhost, private networks, cloud metadata IPs, credentials in URLs), per-agent error isolation, a 10-step budget, and fail-closed errors with a full trace.
+
+---
+
+<div align="center">
+<sub>Built with one NVIDIA key · PRs welcome · Not financial advice — verify market and flight data with the provider before acting.</sub>
+</div>
