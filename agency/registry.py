@@ -1,7 +1,7 @@
 """Agent ecosystem. NIM models via one key + one endpoint.
 
-Default worker model = MAIN_MODEL so you don't need extra entitlements.
-Scraper defaults to meta/muse-glimmer-30b, YT scraper to poolside/laguna-xs-2.1.
+All chat agents default to MAIN_MODEL (Nemotron 3 Ultra) so you don't need
+extra entitlements. Image generation stays on FLUX.1-schnell (diffusion).
 Override per-agent with e.g. WORKER_MODEL_CODER=nvidia/llama-3.1-nemotron-70b-instruct
 """
 import os

@@ -1,4 +1,4 @@
-"""YouTube-scraper bot: poolside/laguna-xs-2.1 + Playwright.
+"""YouTube-scraper bot: Nemotron 3 Ultra + Playwright.
 
 Fast path, no new deps (Playwright chromium already installed):
   1. Resolve target: direct YouTube URL, @handle, or search term.

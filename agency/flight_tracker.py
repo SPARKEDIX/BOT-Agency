@@ -1,4 +1,4 @@
-"""Flight-tracker agent: meta/muse-glimmer-30b + Playwright evidence.
+"""Flight-tracker agent: Nemotron 3 Ultra + Playwright evidence.
 
 Pipeline:
   1. Resolve flight numbers (AI202, 6E345, UA48) + airport codes + explicit URLs.

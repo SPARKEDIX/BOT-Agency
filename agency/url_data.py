@@ -1,4 +1,4 @@
-"""URL-to-data scraper agent: meta/muse-glimmer-30b + Playwright.
+"""URL-to-data scraper agent: Nemotron 3 Ultra + Playwright.
 
 Pipeline per URL (max 3 per task):
   1. Fetch page text via Playwright (chromium headless).

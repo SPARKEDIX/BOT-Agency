@@ -1,4 +1,4 @@
-"""India stock-market analyst agent: poolside/laguna-xs-2.1 + Playwright evidence.
+"""India stock-market analyst agent: Nemotron 3 Ultra + Playwright evidence.
 
 Pipeline:
   1. Resolve symbols (RELIANCE, TCS.NS, NSE:INFY, ...) + explicit URLs from task.

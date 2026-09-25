@@ -7,38 +7,38 @@ load_dotenv()
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BASE_URL = "https://integrate.api.nvidia.com/v1"
 
-# Main / boss model
+# Main / boss model — also the default for every chat agent (fast + healthy).
 MAIN_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 
 # Web-scraper agent model (NIM id)
-SCRAPER_MODEL = os.getenv("SCRAPER_MODEL", "meta/muse-glimmer-30b")
+SCRAPER_MODEL = os.getenv("SCRAPER_MODEL", MAIN_MODEL)
 
 # YouTube-scraper bot model (NIM id)
-YT_SCRAPER_MODEL = os.getenv("YT_SCRAPER_MODEL", "poolside/laguna-xs-2.1")
+YT_SCRAPER_MODEL = os.getenv("YT_SCRAPER_MODEL", MAIN_MODEL)
 
 # Coding agent model (NIM id)
-CODING_MODEL = os.getenv("CODING_MODEL", "google/gemma-4-31b-it")
+CODING_MODEL = os.getenv("CODING_MODEL", MAIN_MODEL)
 
 # Lead-generation agent model (NIM id)
-LEAD_MODEL = os.getenv("LEAD_MODEL", "google/gemma-4-31b-it")
+LEAD_MODEL = os.getenv("LEAD_MODEL", MAIN_MODEL)
 
 # Marketing agent model (NIM id)
-MARKETING_MODEL = os.getenv("MARKETING_MODEL", "meta/muse-glimmer-30b")
+MARKETING_MODEL = os.getenv("MARKETING_MODEL", MAIN_MODEL)
 
 # URL-to-data scraper agent model (NIM id)
-URL_DATA_MODEL = os.getenv("URL_DATA_MODEL", "meta/muse-glimmer-30b")
+URL_DATA_MODEL = os.getenv("URL_DATA_MODEL", MAIN_MODEL)
 
 # India stock-market analyst (trading) agent model (NIM id)
-TRADING_MODEL = os.getenv("TRADING_MODEL", "poolside/laguna-xs-2.1")
+TRADING_MODEL = os.getenv("TRADING_MODEL", MAIN_MODEL)
 
 # Flight-tracker agent model (NIM id)
-FLIGHT_MODEL = os.getenv("FLIGHT_MODEL", "meta/muse-glimmer-30b")
+FLIGHT_MODEL = os.getenv("FLIGHT_MODEL", MAIN_MODEL)
 
 # Crypto-trading agent model (NIM id)
-CRYPTO_MODEL = os.getenv("CRYPTO_MODEL", "poolside/laguna-xs-2.1")
+CRYPTO_MODEL = os.getenv("CRYPTO_MODEL", MAIN_MODEL)
 
 # Real-time world-news agent model (NIM id)
-NEWS_MODEL = os.getenv("NEWS_MODEL", "meta/muse-glimmer-30b")
+NEWS_MODEL = os.getenv("NEWS_MODEL", MAIN_MODEL)
 
 # Image generation (NVIDIA Cloud, not integrate endpoint)
 IMAGE_MODEL = "black-forest-labs/flux.1-schnell"

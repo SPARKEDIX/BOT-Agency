@@ -1,4 +1,4 @@
-"""Marketing agent: meta/muse-glimmer-30b + web evidence.
+"""Marketing agent: Nemotron 3 Ultra + web evidence.
 
 Pipeline:
   1. Fetch product/competitor URLs from the task via scraper helpers (Playwright).

@@ -110,18 +110,18 @@ Type `/` alone to list every command, Tab to complete, and a typo like `/agnts` 
 |---|---|---|
 | Boss (`main_agent`) | Routes chat vs task, plans, synthesizes | `nvidia/nemotron-3-ultra-550b-a55b` |
 | `researcher` | Facts, outlines, comparisons | boss model |
-| `coder` / `coding` | Code, debugging (`coding` = Gemma) | boss / `google/gemma-4-31b-it` |
+| `coder` / `coding` | Code, debugging | boss model |
 | `writer` | Docs, copy, summaries | boss model |
 | `reviewer` | Critiques + improves drafts | boss model |
-| `scraper` | Any URL → summary (ScrapeGraphAI, Playwright fallback) | `meta/muse-glimmer-30b` |
-| `yt_scraper` | YouTube channel/video/search → stats + summary | `poolside/laguna-xs-2.1` |
-| `lead_gen` | ICP → scored lead table (never invents contacts) | `google/gemma-4-31b-it` |
-| `marketing` | Product URLs → brief + competitor table + angles | `meta/muse-glimmer-30b` |
-| `url_data` | Any URL → tables / lists / JSON, verbatim | `meta/muse-glimmer-30b` |
-| `trading` | India NSE/BSE analyst: price + fundamentals + technicals, live news + strategy | `poolside/laguna-xs-2.1` |
-| `flight_tracker` | Live flight status: times, delays, gates (FlightAware/FR24) | `meta/muse-glimmer-30b` |
-| `crypto` | Crypto analyst (BTC/ETH/…): price, market, live news + strategy | `poolside/laguna-xs-2.1` |
-| `news` | Real-time world news: live RSS headlines with sources | `meta/muse-glimmer-30b` |
+| `scraper` | Any URL → summary (ScrapeGraphAI, Playwright fallback) | boss model |
+| `yt_scraper` | YouTube channel/video/search → stats + summary | boss model |
+| `lead_gen` | ICP → scored lead table (never invents contacts) | boss model |
+| `marketing` | Product URLs → brief + competitor table + angles | boss model |
+| `url_data` | Any URL → tables / lists / JSON, verbatim | boss model |
+| `trading` | India NSE/BSE analyst: price + fundamentals + technicals, live news + strategy | boss model |
+| `flight_tracker` | Live flight status: times, delays, gates (FlightAware/FR24) | boss model |
+| `crypto` | Crypto analyst (BTC/ETH/…): price, market, live news + strategy | boss model |
+| `news` | Real-time world news: live RSS headlines with sources | boss model |
 | `image_maker` | Text → JPG image via FLUX.1-schnell (`./outputs`) | `black-forest-labs/flux.1-schnell` |
 
 Every agent shares **one Chroma vector memory** (`./chroma_db`): each recalls relevant past work into its prompt and stores its result. Disable with `--no-memory`.

@@ -1,4 +1,4 @@
-"""Web-scraper agent: meta/muse-glimmer-30b + ScrapeGraphAI + Playwright.
+"""Web-scraper agent: Nemotron 3 Ultra + ScrapeGraphAI + Playwright.
 
 Pipeline per URL (max 3 per task):
   1. Try ScrapeGraphAI SmartScraperGraph with NIM (OpenAI-compatible endpoint).

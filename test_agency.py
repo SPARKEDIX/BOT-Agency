@@ -15,16 +15,16 @@ def test_extract_json():
 def test_registry():
     assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "trading", "flight_tracker", "crypto", "news", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
-    assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
-    assert registry.model_for("url_data") == config.URL_DATA_MODEL == "meta/muse-glimmer-30b"
-    assert registry.model_for("marketing") == config.MARKETING_MODEL == "meta/muse-glimmer-30b"
-    assert registry.model_for("lead_gen") == config.LEAD_MODEL == "google/gemma-4-31b-it"
-    assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == "poolside/laguna-xs-2.1"
-    assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
-    assert registry.model_for("trading") == config.TRADING_MODEL == "poolside/laguna-xs-2.1"
-    assert registry.model_for("flight_tracker") == config.FLIGHT_MODEL == "meta/muse-glimmer-30b"
-    assert registry.model_for("crypto") == config.CRYPTO_MODEL == "poolside/laguna-xs-2.1"
-    assert registry.model_for("news") == config.NEWS_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("scraper") == config.SCRAPER_MODEL == config.MAIN_MODEL
+    assert registry.model_for("url_data") == config.URL_DATA_MODEL == config.MAIN_MODEL
+    assert registry.model_for("marketing") == config.MARKETING_MODEL == config.MAIN_MODEL
+    assert registry.model_for("lead_gen") == config.LEAD_MODEL == config.MAIN_MODEL
+    assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == config.MAIN_MODEL
+    assert registry.model_for("coding") == config.CODING_MODEL == config.MAIN_MODEL
+    assert registry.model_for("trading") == config.TRADING_MODEL == config.MAIN_MODEL
+    assert registry.model_for("flight_tracker") == config.FLIGHT_MODEL == config.MAIN_MODEL
+    assert registry.model_for("crypto") == config.CRYPTO_MODEL == config.MAIN_MODEL
+    assert registry.model_for("news") == config.NEWS_MODEL == config.MAIN_MODEL
     print("registry OK:", list(registry.AGENTS))
 
 
@@ -112,7 +112,7 @@ def test_scraper_agent_mocked():
 
         out = WorkerAgent("scraper", use_memory=False).run("Summarize https://example.com", stream_output=False)
         assert out["role"] == "scraper", out
-        assert out["model"] == "meta/muse-glimmer-30b", out
+        assert out["model"] == config.MAIN_MODEL, out
         assert "https://example.com" in out["output"], out
         print("scraper OK")
     finally:
@@ -137,7 +137,7 @@ def test_yt_scraper_agent_mocked():
 
         out = WorkerAgent("yt_scraper", use_memory=False).run("Summarize https://www.youtube.com/@SPARKEDIX", stream_output=False)
         assert out["role"] == "yt_scraper", out
-        assert out["model"] == "poolside/laguna-xs-2.1", out
+        assert out["model"] == config.MAIN_MODEL, out
         assert "yt-summary" in out["output"], out
         print("yt_scraper OK")
     finally:
@@ -158,8 +158,8 @@ def test_lead_gen_agent_mocked():
 
         out = WorkerAgent("lead_gen", use_memory=False).run("Find AI automation agencies in india", stream_output=False)
         assert out["role"] == "lead_gen", out
-        assert out["model"] == "google/gemma-4-31b-it", out
-        assert seen["model"] == "google/gemma-4-31b-it", seen
+        assert out["model"] == config.MAIN_MODEL, out
+        assert seen["model"] == config.MAIN_MODEL, seen
         assert "Acme" in out["output"], out
         print("lead_gen OK")
     finally:
@@ -180,8 +180,8 @@ def test_marketing_agent_mocked():
 
         out = WorkerAgent("marketing", use_memory=False).run("Research Acme CRM and competitors", stream_output=False)
         assert out["role"] == "marketing", out
-        assert out["model"] == "meta/muse-glimmer-30b", out
-        assert seen["model"] == "meta/muse-glimmer-30b", seen
+        assert out["model"] == config.MAIN_MODEL, out
+        assert seen["model"] == config.MAIN_MODEL, seen
         assert "Acme" in out["output"], out
         print("marketing OK")
     finally:
@@ -202,8 +202,8 @@ def test_url_data_agent_mocked():
 
         out = WorkerAgent("url_data", use_memory=False).run("Extract pricing from https://example.com/pricing", stream_output=False)
         assert out["role"] == "url_data", out
-        assert out["model"] == "meta/muse-glimmer-30b", out
-        assert seen["model"] == "meta/muse-glimmer-30b", seen
+        assert out["model"] == config.MAIN_MODEL, out
+        assert seen["model"] == config.MAIN_MODEL, seen
         assert "$9" in out["output"], out
         print("url_data OK")
     finally:
@@ -388,8 +388,8 @@ def test_trading_agent_mocked():
 
         out = WorkerAgent("trading", use_memory=False).run("Analyse RELIANCE on NSE", stream_output=False)
         assert out["role"] == "trading", out
-        assert out["model"] == "poolside/laguna-xs-2.1", out
-        assert seen["model"] == "poolside/laguna-xs-2.1", seen
+        assert out["model"] == config.MAIN_MODEL, out
+        assert seen["model"] == config.MAIN_MODEL, seen
         assert "Rs 3000" in out["output"] or "Not financial advice" in out["output"], out
         # Real-time link: live news must reach the prompt.
         assert "RELIANCE Q3 profit up" in seen["prompt"], seen["prompt"][:300]
@@ -426,8 +426,8 @@ def test_flight_tracker_agent_mocked():
 
         out = WorkerAgent("flight_tracker", use_memory=False).run("Track AI202 DEL to BOM", stream_output=False)
         assert out["role"] == "flight_tracker", out
-        assert out["model"] == "meta/muse-glimmer-30b", out
-        assert seen["model"] == "meta/muse-glimmer-30b", seen
+        assert out["model"] == config.MAIN_MODEL, out
+        assert seen["model"] == config.MAIN_MODEL, seen
         assert "en route" in out["output"], out
         # Upstream-agent connection: context must reach the prompt.
         out2 = WorkerAgent("flight_tracker", use_memory=False).run(
@@ -462,8 +462,8 @@ def test_crypto_agent_mocked():
 
         out = WorkerAgent("crypto", use_memory=False).run("Should I buy BTC?", stream_output=False)
         assert out["role"] == "crypto", out
-        assert out["model"] == "poolside/laguna-xs-2.1", out
-        assert seen["model"] == "poolside/laguna-xs-2.1", seen
+        assert out["model"] == config.MAIN_MODEL, out
+        assert seen["model"] == config.MAIN_MODEL, seen
         assert "Not financial advice" in out["output"], out
         # Real-time link: live news must reach the prompt.
         assert "ETF inflows" in seen["prompt"], seen["prompt"][:300]
@@ -501,7 +501,7 @@ def test_news_agent_mocked():
 
         out = WorkerAgent("news", use_memory=False).run("Top world news", stream_output=False)
         assert out["role"] == "news", out
-        assert out["model"] == "meta/muse-glimmer-30b", out
+        assert out["model"] == config.MAIN_MODEL, out
         assert "Markets rally" in seen["prompt"], seen["prompt"][:300]
         assert "Top story" in out["output"], out
         print("news OK")

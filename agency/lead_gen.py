@@ -1,4 +1,4 @@
-"""Lead-generation agent: google/gemma-4-31b-it + optional web evidence.
+"""Lead-generation agent: Nemotron 3 Ultra + optional web evidence.
 
 Pipeline:
   1. If the task contains URLs, fetch them via scraper helpers (Playwright).
