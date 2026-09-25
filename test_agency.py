@@ -13,7 +13,7 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "trading", "image_maker"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "trading", "flight_tracker", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
     assert registry.model_for("url_data") == config.URL_DATA_MODEL == "meta/muse-glimmer-30b"
@@ -22,6 +22,7 @@ def test_registry():
     assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == "poolside/laguna-xs-2.1"
     assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
     assert registry.model_for("trading") == config.TRADING_MODEL == "poolside/laguna-xs-2.1"
+    assert registry.model_for("flight_tracker") == config.FLIGHT_MODEL == "meta/muse-glimmer-30b"
     print("registry OK:", list(registry.AGENTS))
 
 
@@ -395,6 +396,41 @@ def test_trading_agent_mocked():
         nc.chat, tr.fetch_playwright = orig_chat, orig_fetch
 
 
+def test_flight_tracker_agent_mocked():
+    """Flight tracker: flight resolve + tracking URLs + NIM status (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.flight_tracker as ft
+
+    assert ft.resolve_flights("Track AI202 please") == ["AI202"]
+    assert ft.resolve_flights("Status of 6E 345?") == ["6E345"]
+    assert ft.resolve_flights("hello world") == []
+    assert ft.resolve_route("DEL to BOM") == "DEL-BOM"
+    assert ft.resolve_route("no route here") is None
+    assert ft.build_tracking_urls("AI202")[0] == "https://www.flightaware.com/live/flight/AI202"
+    assert ft.deep_check([]) == ["no tracking pages fetched — status is low-confidence"]
+    assert ft.deep_check([{"url": "u", "text": "", "error": "fetch failed (x)"}]) != []
+
+    orig_chat, orig_fetch = nc.chat, ft.fetch_playwright
+    seen = {}
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "Status: en route, dep 10:00. Verify with the airline before travel.", "reasoning": ""})[1]
+    ft.fetch_playwright = lambda url, timeout_ms=30000: f"AI202 en route, departed 10:00 from {url}"
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("flight_tracker", use_memory=False).run("Track AI202 DEL to BOM", stream_output=False)
+        assert out["role"] == "flight_tracker", out
+        assert out["model"] == "meta/muse-glimmer-30b", out
+        assert seen["model"] == "meta/muse-glimmer-30b", seen
+        assert "en route" in out["output"], out
+        # Upstream-agent connection: context must reach the prompt.
+        out2 = WorkerAgent("flight_tracker", use_memory=False).run(
+            "Give status", context="Prior researcher found: fog at DEL", stream_output=False)
+        assert "fog" in seen["prompt"], seen["prompt"][:300]
+        print("flight_tracker OK")
+    finally:
+        nc.chat, ft.fetch_playwright = orig_chat, orig_fetch
+
+
 def test_pipeline_security():
     """SSRF guard, secret redaction, unsafe-task filter."""
     from agency.pipeline import is_safe_url, redact_secrets, sanitize_text, split_tasks
@@ -559,6 +595,7 @@ if __name__ == "__main__":
     test_marketing_agent_mocked()
     test_url_data_agent_mocked()
     test_trading_agent_mocked()
+    test_flight_tracker_agent_mocked()
     test_pipeline_security()
     test_pipeline_chat()
     test_pipeline_task_handoff()

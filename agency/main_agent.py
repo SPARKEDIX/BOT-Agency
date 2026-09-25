@@ -17,16 +17,16 @@ ROUTER_SYSTEM = """You are the BOSS router of BOT-Agency (AI Agency).
 Look at the conversation history + latest user message.
 
 - Normal chat (greeting, small talk, simple Q&A, explanation, advice, follow-up): return {"type":"chat","reply":"..."} with the FULL reply.
-- Real task (multi-step work, research + code + docs, deliverables, needs specialists): return {"type":"task","tasks":[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|lead_gen|marketing|url_data|trading|image_maker","instruction":"..."}]} with 1-4 tasks.
-Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, lead_gen, marketing, url_data, trading, image_maker (use scraper for any URL / fetch-website-content work, yt_scraper for YouTube channels/videos/search, lead_gen for find-leads/prospects/outreach lists, marketing for product-details/competitors/positioning, url_data for extract-table/JSON/structured-data-from-URL, trading for india stock market/NSE/BSE/share-price/stock-analysis/investment-research, coding for codegen/debugging/refactoring, image_maker for draw/generate-image/picture/photo/logo).
+- Real task (multi-step work, research + code + docs, deliverables, needs specialists): return {"type":"task","tasks":[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|lead_gen|marketing|url_data|trading|flight_tracker|image_maker","instruction":"..."}]} with 1-4 tasks.
+Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, lead_gen, marketing, url_data, trading, flight_tracker, image_maker (use scraper for any URL / fetch-website-content work, yt_scraper for YouTube channels/videos/search, lead_gen for find-leads/prospects/outreach lists, marketing for product-details/competitors/positioning, url_data for extract-table/JSON/structured-data-from-URL, trading for india stock market/NSE/BSE/share-price/stock-analysis/investment-research, flight_tracker for flight-status/flight-tracking/delays/arrival-departure, coding for codegen/debugging/refactoring, image_maker for draw/generate-image/picture/photo/logo).
 Keep task instructions self-contained (workers see no other history).
 Return ONLY JSON, no other text."""
 
 PLANNER_SYSTEM = """You are the BOSS planner of BOT-Agency.
 Decompose the user goal into 1-4 sub-tasks.
 Return ONLY a JSON array, no other text. Format:
-[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|lead_gen|marketing|url_data|trading|image_maker","instruction":"..."}]
-Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, lead_gen, marketing, url_data, trading, image_maker (URL / website-content work, yt_scraper for YouTube, lead_gen for leads, marketing for product/competitors, url_data for structured data, trading for NSE/BSE stock analysis, image_maker for images).
+[{"id":1,"agent":"researcher|coder|coding|writer|reviewer|scraper|yt_scraper|lead_gen|marketing|url_data|trading|flight_tracker|image_maker","instruction":"..."}]
+Available agents: researcher, coder, coding, writer, reviewer, scraper, yt_scraper, lead_gen, marketing, url_data, trading, flight_tracker, image_maker (URL / website-content work, yt_scraper for YouTube, lead_gen for leads, marketing for product/competitors, url_data for structured data, trading for NSE/BSE stock analysis, flight_tracker for flight status/tracking, image_maker for images).
 Keep instructions self-contained (workers see no other history)."""
 
 SYNTH_SYSTEM = """You are the BOSS synthesizer of BOT-Agency.

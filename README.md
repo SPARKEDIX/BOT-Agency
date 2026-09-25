@@ -117,6 +117,7 @@ Type `/` alone to list every command, use Tab to complete, and a typo like `/agn
 | `marketing` | Product URLs → brief + competitor table + angles | `meta/muse-glimmer-30b` |
 | `url_data` | Any URL → tables / lists / JSON, verbatim | `meta/muse-glimmer-30b` |
 | `trading` | India NSE/BSE analyst: price + fundamentals + technicals + risks (deep-check Yahoo/Screener) | `poolside/laguna-xs-2.1` |
+| `flight_tracker` | Live flight status: times, delays, gates (FlightAware/FR24 + Playwright) | `meta/muse-glimmer-30b` |
 | `image_maker` | Text → JPG image via FLUX.1-schnell (`./outputs`) | `black-forest-labs/flux.1-schnell` |
 
 Every agent shares **one Chroma vector memory** (`./chroma_db`): each recalls relevant past work into its prompt and stores its result. One memory, whole agency. Disable with `--no-memory`.
@@ -130,7 +131,7 @@ Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers 
 | Variable | Default | Purpose |
 |---|---|---|
 | `NVIDIA_API_KEY` | — | **Required.** Single key for all models |
-| `SCRAPER_MODEL` / `YT_SCRAPER_MODEL` / `LEAD_MODEL` / `MARKETING_MODEL` / `URL_DATA_MODEL` / `CODING_MODEL` / `TRADING_MODEL` | see `config.py` | Per-agent model override (or `WORKER_MODEL_<ROLE>`) |
+| `SCRAPER_MODEL` / `YT_SCRAPER_MODEL` / `LEAD_MODEL` / `MARKETING_MODEL` / `URL_DATA_MODEL` / `CODING_MODEL` / `TRADING_MODEL` / `FLIGHT_MODEL` | see `config.py` | Per-agent model override (or `WORKER_MODEL_<ROLE>`) |
 | `CHROMA_PATH` | `./chroma_db` | Vector memory location |
 | `MEMORY_TOP_K` / `MEMORY_ENABLED` | `3` / `1` | Recall depth / on-off |
 | `MEMORY_EMBEDDING` | `hash` | `hash` = offline, `default` = ONNX MiniLM |
@@ -153,7 +154,7 @@ agency/
   memory.py           # Chroma vector store
   agent_memory.py     # memory mixin for all workers
   scraper.py  yt_scraper.py  lead_gen.py  marketing.py  url_data.py
-  trading.py  image_maker.py
+  trading.py  flight_tracker.py  image_maker.py
 ```
 
 ---

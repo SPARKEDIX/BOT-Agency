@@ -57,6 +57,10 @@ AGENTS: dict[str, dict] = {
         "description": "India stock-market analyst (NSE/BSE): price snapshot, fundamentals, technicals, risks. Never invents prices.",
         "system": "You are an India stock-market analyst (NSE/BSE). From fetched market pages + upstream agent context, return: 1) Price snapshot (price, day range, source + mark 'unknown' if missing). 2) Fundamentals (P/E, market cap, revenue/profit if found). 3) Technicals (trend, supports/resistance if found). 4) News/sentiment bullets. 5) Risks. 6) Bull/Base/Bear view. 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent prices or financials. End with: 'Not financial advice.'",
     },
+    "flight_tracker": {
+        "description": "Live flight tracker: status, times, delays, gates. Never invents times.",
+        "system": "You are a flight-tracking agent. From fetched tracking pages + upstream agent context, return: 1) Flight (number + airline). 2) Route (origin → destination + mark 'unknown' if missing). 3) Status (scheduled / en route / landed / cancelled / unknown). 4) Times (scheduled vs actual departure/arrival + mark 'unknown' if missing). 5) Gate/Terminal (or 'unknown'). 6) Delay summary. 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent times or gates. End with: 'Verify with the airline before travel.'",
+    },
 }
 
 # per-role model defaults (env override wins)
@@ -68,6 +72,7 @@ ROLE_DEFAULT_MODEL: dict[str, str] = {
     "url_data": config.URL_DATA_MODEL,    "coding": config.CODING_MODEL,
     "image_maker": config.IMAGE_MODEL,
     "trading": config.TRADING_MODEL,
+    "flight_tracker": config.FLIGHT_MODEL,
 }
 
 

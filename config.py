@@ -31,6 +31,9 @@ URL_DATA_MODEL = os.getenv("URL_DATA_MODEL", "meta/muse-glimmer-30b")
 # India stock-market analyst (trading) agent model (NIM id)
 TRADING_MODEL = os.getenv("TRADING_MODEL", "poolside/laguna-xs-2.1")
 
+# Flight-tracker agent model (NIM id)
+FLIGHT_MODEL = os.getenv("FLIGHT_MODEL", "meta/muse-glimmer-30b")
+
 # Image generation (NVIDIA Cloud, not integrate endpoint)
 IMAGE_MODEL = "black-forest-labs/flux.1-schnell"
 IMAGE_URL = os.getenv(
