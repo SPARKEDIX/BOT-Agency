@@ -53,6 +53,10 @@ AGENTS: dict[str, dict] = {
         "description": "Generates images via FLUX.1-schnell, saves JPG to ./outputs.",
         "system": "You are an image-generation agent. Turn the task into a vivid image prompt and report the saved file path.",
     },
+    "trading": {
+        "description": "India stock-market analyst (NSE/BSE): price snapshot, fundamentals, technicals, risks. Never invents prices.",
+        "system": "You are an India stock-market analyst (NSE/BSE). From fetched market pages + upstream agent context, return: 1) Price snapshot (price, day range, source + mark 'unknown' if missing). 2) Fundamentals (P/E, market cap, revenue/profit if found). 3) Technicals (trend, supports/resistance if found). 4) News/sentiment bullets. 5) Risks. 6) Bull/Base/Bear view. 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent prices or financials. End with: 'Not financial advice.'",
+    },
 }
 
 # per-role model defaults (env override wins)
@@ -63,6 +67,7 @@ ROLE_DEFAULT_MODEL: dict[str, str] = {
     "marketing": config.MARKETING_MODEL,
     "url_data": config.URL_DATA_MODEL,    "coding": config.CODING_MODEL,
     "image_maker": config.IMAGE_MODEL,
+    "trading": config.TRADING_MODEL,
 }
 
 

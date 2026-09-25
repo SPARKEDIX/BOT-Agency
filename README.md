@@ -53,11 +53,14 @@ NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxx
 ## 3. Run it
 
 ```bash
+py backend/server.py                   # localhost frontend + API → http://127.0.0.1:8000
 py main.py                                  # interactive chat (recommended)
 py main.py "Summarize https://example.com"  # one task, then exit
 py main.py "hi, what can you do?" --direct  # single boss call, no workers
 py main.py "Research X, write code" --pipeline  # secure LangGraph run
 ```
+
+Frontend (`frontend/` token-driven per `design.md`, WCAG 2.2 AA): chat + mode switch (auto/direct/agency/pipeline) + agent list + trace + memory, same-origin `/api/chat`. No new deps — stdlib server. Test offline with `py test_frontend.py`.
 
 Just type normally. The boss **chats directly** for greetings and simple questions, and **splits real tasks** across agents automatically.
 
@@ -83,6 +86,8 @@ Just type normally. The boss **chats directly** for greetings and simple questio
 | `pipeline` | `--pipeline` / `/pipeline` | Secure LangGraph run with trace + safety guards | up to ~6 |
 
 ### Chat commands
+
+Type `/` alone to list every command, use Tab to complete, and a typo like `/agnts` suggests the closest match.
 
 | Command | Action |
 |---|---|
@@ -111,6 +116,7 @@ Just type normally. The boss **chats directly** for greetings and simple questio
 | `lead_gen` | ICP → scored lead table (never invents contacts) | `google/gemma-4-31b-it` |
 | `marketing` | Product URLs → brief + competitor table + angles | `meta/muse-glimmer-30b` |
 | `url_data` | Any URL → tables / lists / JSON, verbatim | `meta/muse-glimmer-30b` |
+| `trading` | India NSE/BSE analyst: price + fundamentals + technicals + risks (deep-check Yahoo/Screener) | `poolside/laguna-xs-2.1` |
 | `image_maker` | Text → JPG image via FLUX.1-schnell (`./outputs`) | `black-forest-labs/flux.1-schnell` |
 
 Every agent shares **one Chroma vector memory** (`./chroma_db`): each recalls relevant past work into its prompt and stores its result. One memory, whole agency. Disable with `--no-memory`.
@@ -124,7 +130,7 @@ Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers 
 | Variable | Default | Purpose |
 |---|---|---|
 | `NVIDIA_API_KEY` | — | **Required.** Single key for all models |
-| `SCRAPER_MODEL` / `YT_SCRAPER_MODEL` / `LEAD_MODEL` / `MARKETING_MODEL` / `URL_DATA_MODEL` / `CODING_MODEL` | see `config.py` | Per-agent model override (or `WORKER_MODEL_<ROLE>`) |
+| `SCRAPER_MODEL` / `YT_SCRAPER_MODEL` / `LEAD_MODEL` / `MARKETING_MODEL` / `URL_DATA_MODEL` / `CODING_MODEL` / `TRADING_MODEL` | see `config.py` | Per-agent model override (or `WORKER_MODEL_<ROLE>`) |
 | `CHROMA_PATH` | `./chroma_db` | Vector memory location |
 | `MEMORY_TOP_K` / `MEMORY_ENABLED` | `3` / `1` | Recall depth / on-off |
 | `MEMORY_EMBEDDING` | `hash` | `hash` = offline, `default` = ONNX MiniLM |
@@ -147,7 +153,7 @@ agency/
   memory.py           # Chroma vector store
   agent_memory.py     # memory mixin for all workers
   scraper.py  yt_scraper.py  lead_gen.py  marketing.py  url_data.py
-  image_maker.py
+  trading.py  image_maker.py
 ```
 
 ---

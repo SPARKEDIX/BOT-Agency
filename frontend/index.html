@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>New chat — BOT-Agency</title>
+<meta name="description" content="Simple localhost chat for BOT-Agency: NSE/BSE trading, research, code, scrape.">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<a class="skip" href="#composer-input">Skip to message box</a>
+
+<div class="page">
+  <header class="brand">
+    <span class="dot" id="status-dot" aria-hidden="true"></span>
+    <span class="brand-name">New chat</span>
+    <span class="brand-status" id="status-text" role="status">connecting…</span>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <main class="messages" id="messages" role="log" aria-live="polite" aria-label="Conversation" tabindex="0"></main>
+
+  <section class="starters" id="starters" aria-label="Try these">
+    <button type="button" data-q="Analyse RELIANCE on NSE with risks">Analyse RELIANCE</button>
+    <button type="button" data-q="Summarize https://example.com">Summarize a URL</button>
+    <button type="button" data-q="Find 5 AI automation agencies in India with contacts">Find leads</button>
+  </section>
+
+  <div class="modes" role="radiogroup" aria-label="Mode">
+    <label><input type="radio" name="mode" value="auto" checked><span>Auto</span></label>
+    <label><input type="radio" name="mode" value="direct"><span>Direct</span></label>
+    <label><input type="radio" name="mode" value="agency"><span>Agency</span></label>
+    <label><input type="radio" name="mode" value="pipeline"><span>Pipeline</span></label>
+  </div>
+
+  <form class="composer" id="composer" aria-label="Message composer">
+    <label class="visually-hidden" for="composer-input">Message</label>
+    <textarea id="composer-input" rows="1" maxlength="4000" autocomplete="off"
+      placeholder="Message the agency…"></textarea>
+    <button class="send" id="send-btn" type="submit" aria-label="Send message">↑</button>
+    <button class="send stop" id="stop-btn" type="button" aria-label="Cancel request" hidden>■</button>
+  </form>
+  <p class="meta-row"><span id="meta">Enter sends · Shift+Enter newline</span></p>
+  <p class="field-error" id="composer-error" role="alert" hidden></p>
+
+  <details class="more">
+    <summary>Agents &amp; trace</summary>
+    <ul class="agent-list" id="agent-list"><li class="empty">Loading…</li></ul>
+    <ol class="trace-list" id="trace-list"><li class="empty">No run yet.</li></ol>
+    <p><button type="button" class="linklike" id="memory-clear">Clear memory</button> <span class="hint" id="memory-text"></span></p>
+  </details>
+
+  <footer class="footer"><small>Localhost · <span id="model-line"></span> · Not financial advice.</small></footer>
+</div>
+
+<script src="app.js" defer></script>
+<script src="bg.js" type="module"></script>
+</body>
+</html>

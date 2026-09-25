@@ -32,6 +32,8 @@ class WorkerAgent(AgentMemoryMixin):
             return self._delegate("MarketingAgent", "agency.marketing", instruction, context, stream_output, on_retry)
         if self.role == "url_data":
             return self._delegate("UrlDataAgent", "agency.url_data", instruction, context, stream_output, on_retry)
+        if self.role == "trading":
+            return self._delegate("TradingAgent", "agency.trading", instruction, context, stream_output, on_retry)
         if self.role == "image_maker":
             return self._delegate("ImageMakerAgent", "agency.image_maker", instruction, context, stream_output, on_retry)
         user = f"Context:\n{context}\n\nTask:\n{instruction}" if context else instruction

@@ -13,7 +13,7 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "image_maker"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "trading", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
     assert registry.model_for("url_data") == config.URL_DATA_MODEL == "meta/muse-glimmer-30b"
@@ -21,6 +21,7 @@ def test_registry():
     assert registry.model_for("lead_gen") == config.LEAD_MODEL == "google/gemma-4-31b-it"
     assert registry.model_for("yt_scraper") == config.YT_SCRAPER_MODEL == "poolside/laguna-xs-2.1"
     assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
+    assert registry.model_for("trading") == config.TRADING_MODEL == "poolside/laguna-xs-2.1"
     print("registry OK:", list(registry.AGENTS))
 
 
@@ -361,6 +362,39 @@ def test_image_maker_mocked():
         cfg.NVIDIA_API_KEY = orig_key
 
 
+def test_trading_agent_mocked():
+    """Trading: symbol resolve + deep-check URLs + NIM analysis (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.trading as tr
+
+    assert tr.resolve_symbols("Analyse RELIANCE and NSE:INFY please") == ["RELIANCE", "INFY"]
+    assert tr.resolve_symbols("TCS.NS price?") == ["TCS"]
+    assert tr.build_data_urls("RELIANCE")[0] == "https://finance.yahoo.com/quote/RELIANCE.NS"
+    assert "screener.in" in tr.build_data_urls("TCS")[1]
+    assert tr.deep_check([]) == ["no market pages fetched — analysis is low-confidence"]
+    assert tr.deep_check([{"url": "u", "text": "", "error": "fetch failed (x)"}]) != []
+
+    orig_chat, orig_fetch = nc.chat, tr.fetch_playwright
+    seen = {}
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "Price snapshot: Rs 3000 | Not financial advice.", "reasoning": ""})[1]
+    tr.fetch_playwright = lambda url, timeout_ms=30000: f"RELIANCE price Rs 3000 on NSE from {url}"
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("trading", use_memory=False).run("Analyse RELIANCE on NSE", stream_output=False)
+        assert out["role"] == "trading", out
+        assert out["model"] == "poolside/laguna-xs-2.1", out
+        assert seen["model"] == "poolside/laguna-xs-2.1", seen
+        assert "Rs 3000" in out["output"] or "Not financial advice" in out["output"], out
+        # Upstream-agent connection: context must reach the prompt.
+        out2 = WorkerAgent("trading", use_memory=False).run(
+            "Give view", context="Prior researcher found: strong Q3 results", stream_output=False)
+        assert "researcher" in seen["prompt"] or "Q3" in seen["prompt"], seen["prompt"][:300]
+        print("trading OK")
+    finally:
+        nc.chat, tr.fetch_playwright = orig_chat, orig_fetch
+
+
 def test_pipeline_security():
     """SSRF guard, secret redaction, unsafe-task filter."""
     from agency.pipeline import is_safe_url, redact_secrets, sanitize_text, split_tasks
@@ -501,6 +535,17 @@ def test_all_agents_memory():
         nc.chat = orig
 
 
+def test_slash_suggest():
+    """`/` recommends every command; partial/typo input suggests matches."""
+    from main import SLASH_COMMANDS, suggest_commands
+
+    assert set(suggest_commands("/")) == set(SLASH_COMMANDS) and len(SLASH_COMMANDS) >= 10
+    assert "/agents" in suggest_commands("/agen")
+    assert "/quit" in suggest_commands("/quitt")  # fuzzy match
+    assert suggest_commands("/zzz-nope") == []
+    print("slash_suggest OK")
+
+
 if __name__ == "__main__":
     test_extract_json()
     test_registry()
@@ -513,10 +558,12 @@ if __name__ == "__main__":
     test_lead_gen_agent_mocked()
     test_marketing_agent_mocked()
     test_url_data_agent_mocked()
+    test_trading_agent_mocked()
     test_pipeline_security()
     test_pipeline_chat()
     test_pipeline_task_handoff()
     test_pipeline_error_isolation()
+    test_slash_suggest()
     test_all_agents_memory()
     test_retry_on_overload()
     test_memory_roundtrip()

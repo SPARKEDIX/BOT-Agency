@@ -26,6 +26,58 @@ from agency.worker import WorkerAgent
 console = Console()
 APP = "AI Agency"
 
+# Single source of truth for slash commands: Tab-completion, /help, and parsing.
+SLASH_COMMANDS: dict[str, str] = {
+    "/help": "Show this help",
+    "/agents": "List worker agents in the ecosystem",
+    "/model": "Show or switch boss model — /model <NIM id>",
+    "/auto": "Smart mode (default): chat replies directly, tasks split to agents",
+    "/direct": "Force single boss call (1 request, best when NIM is busy)",
+    "/agency": "Force full agency (plan → workers → synthesize)",
+    "/pipeline": "Secure LangGraph run (blackboard, trace, guards)",
+    "/stream": "Toggle token streaming on/off",
+    "/memory": "Show Chroma docs count — /memory clear wipes memory",
+    "/clear": "Clear screen",
+    "/quit": "Exit (also /exit, /q)",
+}
+
+
+def read_line() -> str:
+    """Prompt with Tab-completion for /commands (prompt_toolkit), fallback to plain."""
+    try:
+        from prompt_toolkit import prompt as pt_prompt
+        from prompt_toolkit.completion import WordCompleter
+
+        completer = WordCompleter(list(SLASH_COMMANDS), ignore_case=True, sentence=True)
+        return pt_prompt([("class:prompt", "❯ ")], completer=completer).strip()
+    except Exception:
+        return Prompt.ask("\n[bold cyan]❯[/bold cyan]").strip()
+
+
+def suggest_commands(partial: str) -> list[str]:
+    """Close matches for an unknown /command (difflib + prefix)."""
+    import difflib
+
+    names = list(SLASH_COMMANDS)
+    if partial in ("", "/"):
+        return names
+    cands = [n for n in names if n.startswith(partial)]
+    cands += [c for c in difflib.get_close_matches(partial, names, n=3, cutoff=0.5) if c not in cands]
+    return cands
+
+
+def show_suggestions(partial: str) -> None:
+    cands = suggest_commands(partial)
+    if not cands:
+        console.print("[yellow]No matching command. Try /help.[/]")
+        return
+    t = Table(show_header=False, box=None)
+    t.add_column("Command", style="green")
+    t.add_column("What it does", style="dim")
+    for c in cands:
+        t.add_row(c, SLASH_COMMANDS[c])
+    console.print(Panel(t, title=f"did you mean (for '{partial}')?" if partial != "/" else "commands", border_style="cyan"))
+
 
 def banner(boss_model: str, mode: str, stream: bool, mem_count: int | None = None) -> None:
     width = min(shutil.get_terminal_size((80, 20)).columns, 90)
@@ -48,17 +100,8 @@ def show_help() -> None:
     t = Table(show_header=True, header_style="bold cyan", box=None)
     t.add_column("Command", style="green")
     t.add_column("What it does", style="white")
-    t.add_row("/help", "Show this help")
-    t.add_row("/agents", "List worker agents in the ecosystem")
-    t.add_row("/model <name>", "Show or switch boss model (NIM id)")
-    t.add_row("/auto", "Smart mode (default): chat replies directly, tasks split to agents")
-    t.add_row("/direct", "Force single boss call (1 request, best when NIM is busy)")
-    t.add_row("/agency", "Force full agency (plan → workers → synthesize)")
-    t.add_row("/pipeline", "Secure LangGraph run (blackboard, trace, guards)")
-    t.add_row("/stream", "Toggle token streaming on/off")
-    t.add_row("/memory [clear]", "Show Chroma docs count, or wipe memory")
-    t.add_row("/clear", "Clear screen")
-    t.add_row("/quit", "Exit")
+    for cmd, desc in SLASH_COMMANDS.items():
+        t.add_row(cmd, desc)
     console.print(Panel(t, title="commands", border_style="cyan"))
 
 
@@ -205,7 +248,7 @@ def repl(boss: MainAgent, mode: str, stream: bool) -> int:
     history: list[dict] = []
     while True:
         try:
-            line = Prompt.ask("\n[bold cyan]❯[/bold cyan]").strip()
+            line = read_line()
         except (EOFError, KeyboardInterrupt):
             console.print("\n[dim]Bye.[/]")
             return 0
@@ -214,6 +257,9 @@ def repl(boss: MainAgent, mode: str, stream: bool) -> int:
         if line.startswith("/"):
             parts = line.split(maxsplit=1)
             cmd, arg = parts[0].lower(), (parts[1] if len(parts) > 1 else "")
+            if cmd == "/":
+                show_suggestions("/")
+                continue
             if cmd in ("/quit", "/exit", "/q"):
                 console.print("[dim]Bye.[/]")
                 return 0
@@ -255,7 +301,7 @@ def repl(boss: MainAgent, mode: str, stream: bool) -> int:
                 except Exception:
                     banner(boss.model, mode, stream)
             else:
-                console.print(f"[yellow]Unknown command {cmd}. Try /help.[/]")
+                show_suggestions(cmd)
             continue
         handle_goal(line, boss, mode, history, stream)
     return 0
