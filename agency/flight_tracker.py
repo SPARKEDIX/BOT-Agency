@@ -21,7 +21,7 @@ import re
 
 from agency import nim_client, registry
 from agency.agent_memory import AgentMemoryMixin
-from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
+from agency.scraper import URL_RE, fetch_many_playwright, MAX_CHARS
 
 MAX_URLS = 4
 EVIDENCE_CHARS = 4000
@@ -124,15 +124,13 @@ class FlightTrackerAgent(AgentMemoryMixin):
                 break
 
         pages: list[dict] = []
+        texts = fetch_many_playwright(urls)  # one browser launch for all URLs
         for url in urls:
-            try:
-                raw = fetch_playwright(url)[:EVIDENCE_CHARS]
-                if not raw.strip():
-                    pages.append({"url": url, "text": "", "error": "empty page (login wall or block)"})
-                else:
-                    pages.append({"url": url, "text": raw, "error": None})
-            except Exception as e:  # noqa: BLE001
-                pages.append({"url": url, "text": "", "error": f"fetch failed ({e})"})
+            raw = (texts.get(url) or "")[:EVIDENCE_CHARS]
+            if not raw.strip():
+                pages.append({"url": url, "text": "", "error": "empty page (login wall or block)"})
+            else:
+                pages.append({"url": url, "text": raw, "error": None})
 
         warnings = deep_check(pages)
 

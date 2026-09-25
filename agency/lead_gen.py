@@ -10,7 +10,7 @@ from __future__ import annotations
 import config
 from agency import nim_client, registry
 from agency.agent_memory import AgentMemoryMixin
-from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
+from agency.scraper import URL_RE, fetch_many_playwright, MAX_CHARS
 
 MAX_URLS = 3
 
@@ -27,11 +27,13 @@ class LeadGenAgent(AgentMemoryMixin):
         text = ((context or "") + "\n" + (instruction or "")).strip()
         urls = [u.rstrip(".,);]") for u in URL_RE.findall(text)][:MAX_URLS]
         evidence: list[str] = []
+        texts = fetch_many_playwright(urls)  # one browser launch for all URLs
         for url in urls:
-            try:
-                evidence.append(f"Source {url}:\n{fetch_playwright(url)[:4000]}")
-            except Exception as e:  # noqa: BLE001
-                evidence.append(f"Source {url}: fetch failed ({e})")
+            raw = texts.get(url) or ""
+            if raw.strip():
+                evidence.append(f"Source {url}:\n{raw[:4000]}")
+            else:
+                evidence.append(f"Source {url}: fetch failed or empty page")
         user = f"Task:\n{instruction}"
         if context:
             user += f"\n\nContext:\n{context}"

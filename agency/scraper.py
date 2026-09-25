@@ -45,6 +45,39 @@ def fetch_playwright(url: str, timeout_ms: int = 30000) -> str:
     return text[:MAX_CHARS]
 
 
+def fetch_many_playwright(urls: list[str], timeout_ms: int = 30000) -> dict[str, str]:
+    """Fetch many URLs with ONE browser launch (latency fix: ~5-10s saved per URL).
+
+    Returns {url: page_text}. Failed URLs map to "" (callers use their
+    existing empty-page branch). Never raises for per-URL failures.
+    """
+    from playwright.sync_api import sync_playwright
+
+    out: dict[str, str] = {}
+    if not urls:
+        return out
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        try:
+            for url in urls:
+                try:
+                    page = browser.new_page()
+                    try:
+                        page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+                        try:
+                            page.wait_for_timeout(1500)
+                        except Exception:
+                            pass
+                        out[url] = (page.inner_text("body") or "")[:MAX_CHARS]
+                    finally:
+                        page.close()
+                except Exception:
+                    out[url] = ""
+        finally:
+            browser.close()
+    return out
+
+
 def smart_scrape(url: str, prompt: str) -> str | None:
     """ScrapeGraphAI with NIM backend. Returns text or None if unavailable."""
     try:

@@ -60,6 +60,48 @@ def test_agency_flow_mocked():
         nc.chat = orig
 
 
+def test_main_run_handoff_and_isolation():
+    """MainAgent.run: 2nd worker sees 1st output; failing worker is isolated."""
+    import agency.nim_client as nc
+    import agency.worker as wmod
+    from agency.main_agent import _handoff
+
+    assert "out-researcher" in _handoff("goal", [{"role": "researcher", "id": 1, "output": "out-researcher"}])
+
+    def fake_chat(messages, model, **kw):
+        if "BOSS router" in messages[0]["content"]:
+            return {"content": '{"type":"task","tasks":[{"id":1,"agent":"researcher","instruction":"find X"},{"id":2,"agent":"writer","instruction":"write X"}]}', "reasoning": ""}
+        return {"content": "FINAL", "reasoning": ""}
+
+    seen: list[dict] = []
+
+    class FakeWorker:
+        def __init__(self, role):
+            self.role = role
+
+        def run(self, instruction, context="", stream_output=False, on_retry=None):
+            seen.append({"role": self.role, "context": context})
+            if self.role == "researcher":
+                raise RuntimeError("boom")
+            return {"role": self.role, "model": "fake", "output": "out-writer"}
+
+    orig_chat, orig_worker = nc.chat, wmod.WorkerAgent
+    import agency.main_agent as mamod
+
+    nc.chat = fake_chat
+    wmod.WorkerAgent = FakeWorker
+    mamod.WorkerAgent = FakeWorker
+    try:
+        out = MainAgent(use_memory=False).run("do X", stream_output=False, log=lambda *a: None)
+        assert out["mode"] == "task" and out["final"] == "FINAL", out
+        assert len(out["worker_results"]) == 2, out["worker_results"]
+        assert out["worker_results"][0].get("error"), out["worker_results"]  # isolated, not fatal
+        assert "researcher" in seen[1]["context"], seen[1]
+        print("main_handoff_isolation OK")
+    finally:
+        nc.chat, wmod.WorkerAgent, mamod.WorkerAgent = orig_chat, orig_worker, orig_worker
+
+
 def test_smart_chat_path():
     """Normal chat must answer directly: 1 call, no workers."""
     import agency.nim_client as nc
@@ -129,9 +171,9 @@ def test_yt_scraper_agent_mocked():
     assert yt.resolve_targets("Find @SomeChannel videos")[0] == "https://www.youtube.com/@SomeChannel"
     assert yt.resolve_targets("funny cats")[0].startswith("https://www.youtube.com/results?search_query=")
 
-    orig_chat, orig_fetch = nc.chat, yt.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, yt.fetch_many_playwright
     nc.chat = lambda messages, model, **kw: {"content": "yt-summary", "reasoning": ""}
-    yt.fetch_playwright = lambda url, timeout_ms=30000: "Sparkedix 815 subscribers 208 videos"
+    yt.fetch_many_playwright = lambda urls, timeout_ms=30000: {u: "Sparkedix 815 subscribers 208 videos" for u in urls}
     try:
         from agency.worker import WorkerAgent
 
@@ -141,7 +183,7 @@ def test_yt_scraper_agent_mocked():
         assert "yt-summary" in out["output"], out
         print("yt_scraper OK")
     finally:
-        nc.chat, yt.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, yt.fetch_many_playwright = orig_chat, orig_fetch
 
 
 def test_lead_gen_agent_mocked():
@@ -149,10 +191,10 @@ def test_lead_gen_agent_mocked():
     import agency.nim_client as nc
     import agency.lead_gen as lg
 
-    orig_chat, orig_fetch = nc.chat, lg.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, lg.fetch_many_playwright
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model), {"content": "| A | CEO | Acme | unknown | web | 8 | fits |", "reasoning": ""})[1]
-    lg.fetch_playwright = lambda url, timeout_ms=30000: (_ for _ in ()).throw(AssertionError("no fetch expected"))
+    lg.fetch_many_playwright = lambda urls, timeout_ms=30000: {}
     try:
         from agency.worker import WorkerAgent
 
@@ -163,7 +205,7 @@ def test_lead_gen_agent_mocked():
         assert "Acme" in out["output"], out
         print("lead_gen OK")
     finally:
-        nc.chat, lg.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, lg.fetch_many_playwright = orig_chat, orig_fetch
 
 
 def test_marketing_agent_mocked():
@@ -171,10 +213,10 @@ def test_marketing_agent_mocked():
     import agency.nim_client as nc
     import agency.marketing as mk
 
-    orig_chat, orig_fetch = nc.chat, mk.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, mk.fetch_many_playwright
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model), {"content": "Brief: Acme CRM. | RivalCo | x | y |", "reasoning": ""})[1]
-    mk.fetch_playwright = lambda url, timeout_ms=30000: (_ for _ in ()).throw(AssertionError("no fetch expected"))
+    mk.fetch_many_playwright = lambda urls, timeout_ms=30000: {}
     try:
         from agency.worker import WorkerAgent
 
@@ -185,7 +227,7 @@ def test_marketing_agent_mocked():
         assert "Acme" in out["output"], out
         print("marketing OK")
     finally:
-        nc.chat, mk.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, mk.fetch_many_playwright = orig_chat, orig_fetch
 
 
 def test_url_data_agent_mocked():
@@ -193,10 +235,10 @@ def test_url_data_agent_mocked():
     import agency.nim_client as nc
     import agency.url_data as ud
 
-    orig_chat, orig_fetch = nc.chat, ud.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, ud.fetch_many_playwright
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model), {"content": "| Price | $9 |", "reasoning": ""})[1]
-    ud.fetch_playwright = lambda url, timeout_ms=30000: "Pricing page: Basic $9"
+    ud.fetch_many_playwright = lambda urls, timeout_ms=30000: {u: "Pricing page: Basic $9" for u in urls}
     try:
         from agency.worker import WorkerAgent
 
@@ -207,7 +249,7 @@ def test_url_data_agent_mocked():
         assert "$9" in out["output"], out
         print("url_data OK")
     finally:
-        nc.chat, ud.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, ud.fetch_many_playwright = orig_chat, orig_fetch
 
 
 def test_retry_on_overload():
@@ -377,10 +419,10 @@ def test_trading_agent_mocked():
     assert tr.deep_check([]) == ["no market pages fetched — analysis is low-confidence"]
     assert tr.deep_check([{"url": "u", "text": "", "error": "fetch failed (x)"}]) != []
 
-    orig_chat, orig_fetch = nc.chat, tr.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, tr.fetch_many_playwright
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "Price snapshot: Rs 3000 | Not financial advice.", "reasoning": ""})[1]
-    tr.fetch_playwright = lambda url, timeout_ms=30000: f"RELIANCE price Rs 3000 on NSE from {url}"
+    tr.fetch_many_playwright = lambda urls, timeout_ms=30000: {u: f"RELIANCE price Rs 3000 on NSE from {u}" for u in urls}
     orig_news = tr.live_news
     tr.live_news = lambda q, max_items=3: [{"title": "RELIANCE Q3 profit up", "source": "TestWire", "time": "today", "link": "", "summary": ""}]
     try:
@@ -399,7 +441,7 @@ def test_trading_agent_mocked():
         assert "researcher" in seen["prompt"] or "Q3" in seen["prompt"], seen["prompt"][:300]
         print("trading OK")
     finally:
-        nc.chat, tr.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, tr.fetch_many_playwright = orig_chat, orig_fetch
         tr.live_news = orig_news
 
 
@@ -417,10 +459,10 @@ def test_flight_tracker_agent_mocked():
     assert ft.deep_check([]) == ["no tracking pages fetched — status is low-confidence"]
     assert ft.deep_check([{"url": "u", "text": "", "error": "fetch failed (x)"}]) != []
 
-    orig_chat, orig_fetch = nc.chat, ft.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, ft.fetch_many_playwright
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "Status: en route, dep 10:00. Verify with the airline before travel.", "reasoning": ""})[1]
-    ft.fetch_playwright = lambda url, timeout_ms=30000: f"AI202 en route, departed 10:00 from {url}"
+    ft.fetch_many_playwright = lambda urls, timeout_ms=30000: {u: f"AI202 en route, departed 10:00 from {u}" for u in urls}
     try:
         from agency.worker import WorkerAgent
 
@@ -435,7 +477,7 @@ def test_flight_tracker_agent_mocked():
         assert "fog" in seen["prompt"], seen["prompt"][:300]
         print("flight_tracker OK")
     finally:
-        nc.chat, ft.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, ft.fetch_many_playwright = orig_chat, orig_fetch
 
 
 def test_crypto_agent_mocked():
@@ -451,10 +493,10 @@ def test_crypto_agent_mocked():
     assert cc.deep_check([]) == ["no market pages fetched — analysis is low-confidence"]
     assert cc.deep_check([{"url": "u", "text": "", "error": "fetch failed (x)"}]) != []
 
-    orig_chat, orig_fetch = nc.chat, cc.fetch_playwright
+    orig_chat, orig_fetch = nc.chat, cc.fetch_many_playwright
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "BTC $97000 | Strategy: hold. Not financial advice.", "reasoning": ""})[1]
-    cc.fetch_playwright = lambda url, timeout_ms=30000: f"BTC price $97000 from {url}"
+    cc.fetch_many_playwright = lambda urls, timeout_ms=30000: {u: f"BTC price $97000 from {u}" for u in urls}
     orig_news = cc.live_news
     cc.live_news = lambda q, max_items=3: [{"title": "ETF inflows hit record", "source": "TestWire", "time": "today", "link": "", "summary": ""}]
     try:
@@ -469,7 +511,7 @@ def test_crypto_agent_mocked():
         assert "ETF inflows" in seen["prompt"], seen["prompt"][:300]
         print("crypto OK")
     finally:
-        nc.chat, cc.fetch_playwright = orig_chat, orig_fetch
+        nc.chat, cc.fetch_many_playwright = orig_chat, orig_fetch
         cc.live_news = orig_news
 
 
@@ -665,6 +707,7 @@ if __name__ == "__main__":
     test_registry()
     test_rate_limiter_spacing()
     test_agency_flow_mocked()
+    test_main_run_handoff_and_isolation()
     test_smart_chat_path()
     test_parse_router()
     test_scraper_agent_mocked()

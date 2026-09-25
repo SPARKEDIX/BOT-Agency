@@ -90,6 +90,14 @@ def _parse_router(text: str) -> dict:
     return {"type": "chat", "reply": text.strip() or "I didn't catch that — could you rephrase?"}
 
 
+def _handoff(goal: str, results: list[dict]) -> str:
+    """Blackboard: later workers see earlier workers' outputs (capped)."""
+    parts = [f"Overall goal: {goal}", "Prior agents' outputs (build on these, don't repeat):"]
+    for r in results[-3:]:
+        parts.append(f"[{r.get('role')}#{r.get('id')}]: {str(r.get('output', ''))[:1500]}")
+    return "\n".join(parts)
+
+
 class MainAgent:
     def __init__(self, model: str | None = None, memory=None, use_memory: bool = True):
         self.model = model or config.MAIN_MODEL
@@ -220,11 +228,17 @@ class MainAgent:
         results: list[dict] = []
         for t in tasks:  # sequential = never bursts 40 RPM
             log(f"[{t['agent']}] running task {t['id']}...")
-            w = WorkerAgent(t["agent"])
-            out = w.run(t["instruction"], context=f"Overall goal: {goal}", stream_output=False, on_retry=on_retry)
-            out["id"] = t["id"]
+            try:
+                w = WorkerAgent(t["agent"])
+                out = w.run(t["instruction"], context=_handoff(goal, results),
+                            stream_output=False, on_retry=on_retry)
+                out["id"] = t["id"]
+            except Exception as e:  # noqa: BLE001 - isolate, keep agency alive
+                out = {"role": t["agent"], "id": t["id"], "model": "",
+                       "output": "", "error": str(e)[:300]}
+                log(f"[{t['agent']}] FAILED isolated: {e}")
             results.append(out)
-            log(f"[{t['agent']}] done ({len(out['output'])} chars)")
+            log(f"[{t['agent']}] done ({len(out.get('output', ''))} chars)")
 
         log("[main] synthesizing final answer...")
         final = self.synthesize(goal, results, stream_output=stream_output, on_retry=on_retry)

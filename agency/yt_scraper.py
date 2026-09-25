@@ -13,7 +13,7 @@ import urllib.parse
 import config
 from agency import nim_client, registry
 from agency.agent_memory import AgentMemoryMixin
-from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
+from agency.scraper import URL_RE, fetch_many_playwright, MAX_CHARS
 
 MAX_URLS = 3
 HANDLE_RE = re.compile(r"@[\w.-]+", re.I)
@@ -51,15 +51,12 @@ class YTScraperAgent(AgentMemoryMixin):
         snippet = self._recall(instruction)
         mem_ctx = f"\n\nRelevant past memory:\n{snippet}" if snippet else ""
         parts: list[str] = []
+        texts = fetch_many_playwright(targets)  # one browser launch for all targets
         for url in targets:
-            try:
-                raw = fetch_playwright(url)
-                source = "playwright"
-            except Exception as e:  # noqa: BLE001
-                parts.append(f"URL: {url}\nERROR: could not fetch ({e})")
-                continue
+            raw = texts.get(url) or ""
+            source = "playwright"
             if not raw.strip():
-                parts.append(f"URL: {url}\nERROR: empty page (login wall or block)")
+                parts.append(f"URL: {url}\nERROR: could not fetch or empty page (login wall or block)")
                 continue
             summary = nim_client.chat(
                 messages=[

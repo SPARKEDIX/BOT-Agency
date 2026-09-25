@@ -18,7 +18,7 @@ import re
 
 from agency import nim_client, registry
 from agency.agent_memory import AgentMemoryMixin
-from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
+from agency.scraper import URL_RE, fetch_many_playwright, MAX_CHARS
 
 MAX_URLS = 3
 MAX_HEADLINES = 8
@@ -104,12 +104,10 @@ class NewsAgent(AgentMemoryMixin):
         headlines = fetch_rss(topic or instruction.strip(), max_items=MAX_HEADLINES)
 
         pages: list[str] = []
+        texts = fetch_many_playwright(urls)  # one browser launch for all URLs
         for url in urls:
-            try:
-                raw = fetch_playwright(url)[:4000]
-                pages.append(f"Source {url}:\n{raw}" if raw.strip() else f"Source {url}: empty page (login wall or block)")
-            except Exception as e:  # noqa: BLE001
-                pages.append(f"Source {url}: fetch failed ({e})")
+            raw = (texts.get(url) or "")[:4000]
+            pages.append(f"Source {url}:\n{raw}" if raw.strip() else f"Source {url}: empty page (login wall or block)")
 
         user = f"Task:\n{instruction}\n\nTopic: {topic or 'general world news'}"
         if context:

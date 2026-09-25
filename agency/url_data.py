@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from agency import nim_client, registry
 from agency.agent_memory import AgentMemoryMixin
-from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
+from agency.scraper import URL_RE, fetch_many_playwright, MAX_CHARS
 
 MAX_URLS = 3
 
@@ -44,14 +44,11 @@ class UrlDataAgent(AgentMemoryMixin):
             self._store(self.role, instruction, res["content"])
             return {"role": self.role, "model": self.model, "output": res["content"]}
         parts: list[str] = []
+        texts = fetch_many_playwright(urls)  # one browser launch for all URLs
         for url in urls:
-            try:
-                raw = fetch_playwright(url)
-            except Exception as e:  # noqa: BLE001
-                parts.append(f"URL: {url}\nERROR: could not fetch ({e})")
-                continue
+            raw = texts.get(url) or ""
             if not raw.strip():
-                parts.append(f"URL: {url}\nERROR: empty page (login wall or block)")
+                parts.append(f"URL: {url}\nERROR: could not fetch or empty page (login wall or block)")
                 continue
             data = nim_client.chat(
                 messages=[

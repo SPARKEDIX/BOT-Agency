@@ -46,6 +46,7 @@ def get_boss():
 
 def run_auto(goal, history):
     """Mirror main.py run_auto without rich UI. Returns dict."""
+    from agency.main_agent import _handoff
     from agency.worker import WorkerAgent
 
     boss = get_boss()
@@ -61,7 +62,7 @@ def run_auto(goal, history):
     for t in tasks:
         try:
             w = WorkerAgent(t["agent"])
-            out = w.run(t["instruction"], context=f"Overall goal: {goal}", stream_output=False)
+            out = w.run(t["instruction"], context=_handoff(goal, results), stream_output=False)
             out["id"] = t["id"]
             results.append(out)
             trace.append(f"worker: {t['agent']}#{t['id']} ok")
@@ -90,6 +91,7 @@ def run_direct(goal, history):
 
 
 def run_agency(goal, history):
+    from agency.main_agent import _handoff
     from agency.worker import WorkerAgent
 
     boss = get_boss()
@@ -100,7 +102,7 @@ def run_agency(goal, history):
     for t in tasks:
         try:
             w = WorkerAgent(t["agent"])
-            out = w.run(t["instruction"], context=f"Overall goal: {goal}", stream_output=False)
+            out = w.run(t["instruction"], context=_handoff(goal, results), stream_output=False)
             out["id"] = t["id"]
             results.append(out)
             trace.append(f"worker: {t['agent']}#{t['id']} ok")
