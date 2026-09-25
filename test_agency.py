@@ -13,7 +13,7 @@ def test_extract_json():
 
 
 def test_registry():
-    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "trading", "flight_tracker", "image_maker"}
+    assert set(registry.AGENTS) == {"researcher", "coder", "coding", "writer", "reviewer", "scraper", "yt_scraper", "lead_gen", "marketing", "url_data", "trading", "flight_tracker", "crypto", "news", "image_maker"}
     assert registry.model_for("coder").startswith("nvidia/")
     assert registry.model_for("scraper") == config.SCRAPER_MODEL == "meta/muse-glimmer-30b"
     assert registry.model_for("url_data") == config.URL_DATA_MODEL == "meta/muse-glimmer-30b"
@@ -23,6 +23,8 @@ def test_registry():
     assert registry.model_for("coding") == config.CODING_MODEL == "google/gemma-4-31b-it"
     assert registry.model_for("trading") == config.TRADING_MODEL == "poolside/laguna-xs-2.1"
     assert registry.model_for("flight_tracker") == config.FLIGHT_MODEL == "meta/muse-glimmer-30b"
+    assert registry.model_for("crypto") == config.CRYPTO_MODEL == "poolside/laguna-xs-2.1"
+    assert registry.model_for("news") == config.NEWS_MODEL == "meta/muse-glimmer-30b"
     print("registry OK:", list(registry.AGENTS))
 
 
@@ -379,6 +381,8 @@ def test_trading_agent_mocked():
     seen = {}
     nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "Price snapshot: Rs 3000 | Not financial advice.", "reasoning": ""})[1]
     tr.fetch_playwright = lambda url, timeout_ms=30000: f"RELIANCE price Rs 3000 on NSE from {url}"
+    orig_news = tr.live_news
+    tr.live_news = lambda q, max_items=3: [{"title": "RELIANCE Q3 profit up", "source": "TestWire", "time": "today", "link": "", "summary": ""}]
     try:
         from agency.worker import WorkerAgent
 
@@ -387,6 +391,8 @@ def test_trading_agent_mocked():
         assert out["model"] == "poolside/laguna-xs-2.1", out
         assert seen["model"] == "poolside/laguna-xs-2.1", seen
         assert "Rs 3000" in out["output"] or "Not financial advice" in out["output"], out
+        # Real-time link: live news must reach the prompt.
+        assert "RELIANCE Q3 profit up" in seen["prompt"], seen["prompt"][:300]
         # Upstream-agent connection: context must reach the prompt.
         out2 = WorkerAgent("trading", use_memory=False).run(
             "Give view", context="Prior researcher found: strong Q3 results", stream_output=False)
@@ -394,6 +400,7 @@ def test_trading_agent_mocked():
         print("trading OK")
     finally:
         nc.chat, tr.fetch_playwright = orig_chat, orig_fetch
+        tr.live_news = orig_news
 
 
 def test_flight_tracker_agent_mocked():
@@ -429,6 +436,77 @@ def test_flight_tracker_agent_mocked():
         print("flight_tracker OK")
     finally:
         nc.chat, ft.fetch_playwright = orig_chat, orig_fetch
+
+
+def test_crypto_agent_mocked():
+    """Crypto: coin resolve + tracking URLs + NIM analysis (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.crypto as cc
+
+    assert cc.resolve_coins("Analyse BTC and ETH please") == ["BTC", "ETH"]
+    assert cc.resolve_coins("BTCUSDT price?") == ["BTC"]
+    assert cc.resolve_coins("hello world") == []
+    assert cc.build_crypto_urls("BTC")[0] == "https://finance.yahoo.com/quote/BTC-USD"
+    assert "coingecko" in cc.build_crypto_urls("ETH")[1]
+    assert cc.deep_check([]) == ["no market pages fetched — analysis is low-confidence"]
+    assert cc.deep_check([{"url": "u", "text": "", "error": "fetch failed (x)"}]) != []
+
+    orig_chat, orig_fetch = nc.chat, cc.fetch_playwright
+    seen = {}
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "BTC $97000 | Strategy: hold. Not financial advice.", "reasoning": ""})[1]
+    cc.fetch_playwright = lambda url, timeout_ms=30000: f"BTC price $97000 from {url}"
+    orig_news = cc.live_news
+    cc.live_news = lambda q, max_items=3: [{"title": "ETF inflows hit record", "source": "TestWire", "time": "today", "link": "", "summary": ""}]
+    try:
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("crypto", use_memory=False).run("Should I buy BTC?", stream_output=False)
+        assert out["role"] == "crypto", out
+        assert out["model"] == "poolside/laguna-xs-2.1", out
+        assert seen["model"] == "poolside/laguna-xs-2.1", seen
+        assert "Not financial advice" in out["output"], out
+        # Real-time link: live news must reach the prompt.
+        assert "ETF inflows" in seen["prompt"], seen["prompt"][:300]
+        print("crypto OK")
+    finally:
+        nc.chat, cc.fetch_playwright = orig_chat, orig_fetch
+        cc.live_news = orig_news
+
+
+def test_news_agent_mocked():
+    """News: topic resolve + RSS parse + NIM briefing (mocked, no network)."""
+    import agency.nim_client as nc
+    import agency.news as nw
+
+    assert nw.resolve_topic("Get me the latest news about AI") == "AI"
+    assert "RELIANCE" in nw.resolve_topic("RELIANCE stock news")
+    assert nw.build_rss_url("bitcoin").startswith("https://news.google.com/rss/search?q=")
+
+    import requests
+    orig_chat, orig_get = nc.chat, requests.get
+    seen = {}
+
+    class FakeResp:
+        status_code = 200
+        text = ('<rss><channel><item><title>Markets rally</title><link>http://x</link>'
+                '<pubDate>today</pubDate><source>TestWire</source>'
+                '<description>Stocks up.</description></item></channel></rss>')
+
+    nc.chat = lambda messages, model, **kw: (seen.update(model=model, prompt=messages[1]["content"]), {"content": "Top story: Markets rally (TestWire).", "reasoning": ""})[1]
+    requests.get = lambda url, headers=None, timeout=15: FakeResp()
+    try:
+        heads = nw.fetch_rss("markets")
+        assert heads and heads[0]["title"] == "Markets rally" and heads[0]["source"] == "TestWire", heads
+        from agency.worker import WorkerAgent
+
+        out = WorkerAgent("news", use_memory=False).run("Top world news", stream_output=False)
+        assert out["role"] == "news", out
+        assert out["model"] == "meta/muse-glimmer-30b", out
+        assert "Markets rally" in seen["prompt"], seen["prompt"][:300]
+        assert "Top story" in out["output"], out
+        print("news OK")
+    finally:
+        nc.chat, requests.get = orig_chat, orig_get
 
 
 def test_pipeline_security():
@@ -596,6 +674,8 @@ if __name__ == "__main__":
     test_url_data_agent_mocked()
     test_trading_agent_mocked()
     test_flight_tracker_agent_mocked()
+    test_crypto_agent_mocked()
+    test_news_agent_mocked()
     test_pipeline_security()
     test_pipeline_chat()
     test_pipeline_task_handoff()

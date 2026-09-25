@@ -4,10 +4,10 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![NVIDIA NIM](https://img.shields.io/badge/NIM-NVIDIA-76b900)](https://build.nvidia.com)
-[![13 agents](https://img.shields.io/badge/agents-13-6da7ec)]()
-[![27 tests passing](https://img.shields.io/badge/tests-27_passing-brightgreen)]()
+[![13 agents](https://img.shields.io/badge/agents-15-6da7ec)]()
+[![27 tests passing](https://img.shields.io/badge/tests-29_passing-brightgreen)]()
 
-**Chat with a team of AI agents that do real work — research, code, stocks, flights, leads, scraping, images.**
+**Chat with a team of AI agents that do real work — research, code, stocks, crypto, flights, live news, leads, scraping, images.**
 One smart **boss** decides whether to answer directly or split the job across specialists. One API key. No OpenAI/Anthropic keys.
 
 [Quickstart](#-run-it-60-seconds) · [What it can do](#-what-can-it-do) · [The team](#-the-team) · [Troubleshooting](#-troubleshooting) · [How it works](#-how-it-works)
@@ -58,8 +58,10 @@ Just type normally. The boss **chats directly** for greetings and **splits real 
 
 ```
 hi, who are you?
-Track AI202 from DEL to BOM — is it delayed?
+Top world news right now
+Should I buy BTC? Give strategy with latest news
 Analyse RELIANCE on NSE with risks
+Track AI202 from DEL to BOM — is it delayed?
 Summarize https://www.youtube.com/@SPARKEDIX
 Find 5 AI automation agencies in India with contacts
 Compare Notion vs Obsidian pricing and features
@@ -116,8 +118,10 @@ Type `/` alone to list every command, Tab to complete, and a typo like `/agnts` 
 | `lead_gen` | ICP → scored lead table (never invents contacts) | `google/gemma-4-31b-it` |
 | `marketing` | Product URLs → brief + competitor table + angles | `meta/muse-glimmer-30b` |
 | `url_data` | Any URL → tables / lists / JSON, verbatim | `meta/muse-glimmer-30b` |
-| `trading` | India NSE/BSE analyst: price + fundamentals + technicals + risks | `poolside/laguna-xs-2.1` |
+| `trading` | India NSE/BSE analyst: price + fundamentals + technicals, live news + strategy | `poolside/laguna-xs-2.1` |
 | `flight_tracker` | Live flight status: times, delays, gates (FlightAware/FR24) | `meta/muse-glimmer-30b` |
+| `crypto` | Crypto analyst (BTC/ETH/…): price, market, live news + strategy | `poolside/laguna-xs-2.1` |
+| `news` | Real-time world news: live RSS headlines with sources | `meta/muse-glimmer-30b` |
 | `image_maker` | Text → JPG image via FLUX.1-schnell (`./outputs`) | `black-forest-labs/flux.1-schnell` |
 
 Every agent shares **one Chroma vector memory** (`./chroma_db`): each recalls relevant past work into its prompt and stores its result. Disable with `--no-memory`.
@@ -131,7 +135,7 @@ Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers 
 | Variable | Default | Purpose |
 |---|---|---|
 | `NVIDIA_API_KEY` | — | **Required.** Single key for all models |
-| `SCRAPER_MODEL` / `YT_SCRAPER_MODEL` / `LEAD_MODEL` / `MARKETING_MODEL` / `URL_DATA_MODEL` / `CODING_MODEL` / `TRADING_MODEL` / `FLIGHT_MODEL` | see `config.py` | Per-agent model override (or `WORKER_MODEL_<ROLE>`) |
+| `SCRAPER_MODEL` / `YT_SCRAPER_MODEL` / `LEAD_MODEL` / `MARKETING_MODEL` / `URL_DATA_MODEL` / `CODING_MODEL` / `TRADING_MODEL` / `FLIGHT_MODEL` / `CRYPTO_MODEL` / `NEWS_MODEL` | see `config.py` | Per-agent model override (or `WORKER_MODEL_<ROLE>`) |
 | `CHROMA_PATH` | `./chroma_db` | Vector memory location |
 | `MEMORY_TOP_K` / `MEMORY_ENABLED` | `3` / `1` | Recall depth / on-off |
 | `MEMORY_EMBEDDING` | `hash` | `hash` = offline, `default` = ONNX MiniLM |
@@ -141,7 +145,7 @@ Shared **40 requests/minute** budget: one rate limiter (1.5 s spacing), workers 
 ## ✅ Test (no key needed)
 
 ```bash
-py test_agency.py     # 23 offline checks (mocked API): routing, all agents, retries, memory, pipeline
+py test_agency.py     # 25 offline checks (mocked API): routing, all agents, retries, memory, pipeline
 py test_frontend.py   # 4 offline checks: design tokens, a11y, API wiring, design.md
 ```
 
@@ -187,7 +191,7 @@ frontend/             # browser UI (index.html, styles.css, app.js, bg.js)
 config.py             # key, endpoint, models, budgets
 design.md             # UI design tokens + component rules
 assets/banner.svg     # animated README banner
-test_agency.py        # 23 offline tests, no key needed
+test_agency.py        # 25 offline tests, no key needed
 test_frontend.py      # 4 offline UI tests, no key needed
 agency/
   main_agent.py       # boss: router + planner + synthesizer
@@ -199,7 +203,7 @@ agency/
   memory.py           # Chroma vector store
   agent_memory.py     # memory mixin for all workers
   scraper.py  yt_scraper.py  lead_gen.py  marketing.py  url_data.py
-  trading.py  flight_tracker.py  image_maker.py
+  trading.py  flight_tracker.py  crypto.py  news.py  image_maker.py
 ```
 
 ## 🔒 Security notes

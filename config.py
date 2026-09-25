@@ -34,6 +34,12 @@ TRADING_MODEL = os.getenv("TRADING_MODEL", "poolside/laguna-xs-2.1")
 # Flight-tracker agent model (NIM id)
 FLIGHT_MODEL = os.getenv("FLIGHT_MODEL", "meta/muse-glimmer-30b")
 
+# Crypto-trading agent model (NIM id)
+CRYPTO_MODEL = os.getenv("CRYPTO_MODEL", "poolside/laguna-xs-2.1")
+
+# Real-time world-news agent model (NIM id)
+NEWS_MODEL = os.getenv("NEWS_MODEL", "meta/muse-glimmer-30b")
+
 # Image generation (NVIDIA Cloud, not integrate endpoint)
 IMAGE_MODEL = "black-forest-labs/flux.1-schnell"
 IMAGE_URL = os.getenv(

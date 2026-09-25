@@ -36,6 +36,10 @@ class WorkerAgent(AgentMemoryMixin):
             return self._delegate("TradingAgent", "agency.trading", instruction, context, stream_output, on_retry)
         if self.role == "flight_tracker":
             return self._delegate("FlightTrackerAgent", "agency.flight_tracker", instruction, context, stream_output, on_retry)
+        if self.role == "crypto":
+            return self._delegate("CryptoAgent", "agency.crypto", instruction, context, stream_output, on_retry)
+        if self.role == "news":
+            return self._delegate("NewsAgent", "agency.news", instruction, context, stream_output, on_retry)
         if self.role == "image_maker":
             return self._delegate("ImageMakerAgent", "agency.image_maker", instruction, context, stream_output, on_retry)
         user = f"Context:\n{context}\n\nTask:\n{instruction}" if context else instruction

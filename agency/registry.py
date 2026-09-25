@@ -54,12 +54,20 @@ AGENTS: dict[str, dict] = {
         "system": "You are an image-generation agent. Turn the task into a vivid image prompt and report the saved file path.",
     },
     "trading": {
-        "description": "India stock-market analyst (NSE/BSE): price snapshot, fundamentals, technicals, risks. Never invents prices.",
-        "system": "You are an India stock-market analyst (NSE/BSE). From fetched market pages + upstream agent context, return: 1) Price snapshot (price, day range, source + mark 'unknown' if missing). 2) Fundamentals (P/E, market cap, revenue/profit if found). 3) Technicals (trend, supports/resistance if found). 4) News/sentiment bullets. 5) Risks. 6) Bull/Base/Bear view. 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent prices or financials. End with: 'Not financial advice.'",
+        "description": "India stock-market analyst (NSE/BSE): price snapshot, fundamentals, technicals, live news + strategy. Never invents prices.",
+        "system": "You are an India stock-market analyst (NSE/BSE). From fetched market pages, live news + upstream agent context, return: 1) Price snapshot (price, day range, source + mark 'unknown' if missing). 2) Fundamentals (P/E, market cap, revenue/profit if found). 3) Technicals (trend, supports/resistance if found). 4) Live news impact (how today's headlines move this stock). 5) Risks. 6) Strategy (Bull/Base/Bear view + suggested actions). 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent prices or financials. End with: 'Not financial advice.'",
     },
     "flight_tracker": {
         "description": "Live flight tracker: status, times, delays, gates. Never invents times.",
         "system": "You are a flight-tracking agent. From fetched tracking pages + upstream agent context, return: 1) Flight (number + airline). 2) Route (origin → destination + mark 'unknown' if missing). 3) Status (scheduled / en route / landed / cancelled / unknown). 4) Times (scheduled vs actual departure/arrival + mark 'unknown' if missing). 5) Gate/Terminal (or 'unknown'). 6) Delay summary. 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent times or gates. End with: 'Verify with the airline before travel.'",
+    },
+    "crypto": {
+        "description": "Crypto analyst (BTC/ETH/...): price, market, live news + strategy. Never invents prices.",
+        "system": "You are a crypto-trading analyst. From fetched market pages, live news + upstream agent context, return: 1) Price snapshot (price, 24h range, source + mark 'unknown' if missing). 2) Market (market cap, volume, trend if found). 3) Sentiment (funding/fear-greed/on-chain hints if found, else 'unknown'). 4) Live news impact (how today's headlines move this coin). 5) Risks (volatility, liquidity, regulatory). 6) Strategy (Bull/Base/Bear view + suggested actions). 7) Sources list. 8) Data-quality notes. Only use fetched/verified facts — never invent prices. End with: 'Not financial advice.'",
+    },
+    "news": {
+        "description": "Real-time world news: live headlines with sources. Never invents events.",
+        "system": "You are a real-time world-news agent. From live RSS headlines + fetched pages, return: 1) Top stories table: Headline | Source | Time. 2) 3-5 line brief per top story. 3) What to watch next. Only report fetched headlines — never invent events; mark unsourced claims 'unverified'. End with: 'Headlines move fast — verify before acting.'",
     },
 }
 
@@ -73,6 +81,8 @@ ROLE_DEFAULT_MODEL: dict[str, str] = {
     "image_maker": config.IMAGE_MODEL,
     "trading": config.TRADING_MODEL,
     "flight_tracker": config.FLIGHT_MODEL,
+    "crypto": config.CRYPTO_MODEL,
+    "news": config.NEWS_MODEL,
 }
 
 

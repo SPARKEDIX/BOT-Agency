@@ -28,7 +28,7 @@
     </circle>
   </g>
   <text x="400" y="92" text-anchor="middle" font-family="system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="52" font-weight="700" fill="url(#sweep)">BOT-Agency</text>
-  <text x="400" y="126" text-anchor="middle" font-family="system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="17" fill="#c3c2b7">One boss model · 13 specialist agents · single NVIDIA key</text>
+  <text x="400" y="126" text-anchor="middle" font-family="system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="17" fill="#c3c2b7">One boss model · 15 specialist agents · single NVIDIA key</text>
   <rect x="392" y="140" width="16" height="4" rx="2" fill="#6da7ec">
     <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite"/>
   </rect>

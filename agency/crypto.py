@@ -1,19 +1,18 @@
-"""India stock-market analyst agent: poolside/laguna-xs-2.1 + Playwright evidence.
+"""Crypto-trading agent: CoinGecko/Yahoo/CoinDesk via Playwright + live news.
 
 Pipeline:
-  1. Resolve symbols (RELIANCE, TCS.NS, NSE:INFY, ...) + explicit URLs from task.
-  2. Build deep-check data URLs (Yahoo Finance, Screener.in) + fetch via Playwright.
-  3. Deep data check: empty/blocked detection, price cross-check, conflict warnings.
-  4. One NIM call turns evidence + upstream-agent context into structured analysis.
-  Never invents prices: missing fields are marked 'unknown'. Not financial advice.
+  1. Resolve coins (BTC, ETH, SOL, BTCUSDT, BTC/USD ...) + explicit URLs.
+  2. Build tracking URLs (Yahoo Finance, CoinGecko, CoinDesk) + fetch via Playwright.
+  3. Deep data check: empty/blocked detection, price cross-check warnings.
+  4. Live crypto news via news.fetch_rss (zero NIM cost) for real-time context.
+  5. One NIM call turns evidence + news into analysis + strategy suggestion.
+  Never invents prices: missing fields are marked 'unknown'.
 
 Connection with other agents (blackboard contract):
-  - Upstream: accepts `context` from pipeline _handoff — typically researcher
-    (market news), scraper/url_data (fetched pages). Treated as evidence,
-    labelled "Upstream agent context".
-  - Downstream: output is structured markdown (Price snapshot / Fundamentals /
-    Technicals / News / Risks / View / Sources / Data quality) so writer can
-    polish it, reviewer can validate it, and boss synthesizer can cite it.
+  - Upstream: `context` from pipeline _handoff (news/researcher/scraper).
+    Plus auto-fetched live news for the top coin.
+  - Downstream: structured markdown (Price / Market / On-chain+Sentiment /
+    News / Risks / Strategy / Sources / Data quality) for writer/reviewer/boss.
 """
 from __future__ import annotations
 
@@ -26,63 +25,63 @@ from agency.scraper import URL_RE, fetch_playwright, MAX_CHARS
 MAX_URLS = 4
 EVIDENCE_CHARS = 4000
 
-# Nifty-50 / large-cap base set for symbol spotting. Generic detection also
-# handles NSE:XXX / XXX.NS / XXX.BO patterns for any symbol.
-KNOWN_SYMBOLS = {
-    "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "ITC",
-    "LT", "AXISBANK", "KOTAKBANK", "BHARTIARTL", "HCLTECH", "WIPRO",
-    "MARUTI", "TATAMOTORS", "TATASTEEL", "SUNPHARMA", "TITAN", "ULTRACEMCO",
-    "ADANIENT", "ADANIPORTS", "POWERGRID", "NTPC", "ONGC", "COALINDIA",
-    "BAJFINANCE", "BAJAJFINSV", "ASIANPAINT", "NESTLEIND", "HEROMOTOCO",
-    "EICHERMOT", "DRREDDY", "CIPLA", "DIVISLAB", "GRASIM", "JSWSTEEL",
-    "HINDALCO", "BPCL", "BRITANNIA", "DABUR", "HAVELLS", "TECHM",
-    "NIFTY", "SENSEX", "BANKNIFTY", "INDIAVIX",
+# Major coins: symbol -> (CoinGecko slug, CoinDesk slug).
+KNOWN_COINS = {
+    "BTC": ("bitcoin", "bitcoin"),
+    "ETH": ("ethereum", "ethereum"),
+    "SOL": ("solana", "solana"),
+    "XRP": ("xrp", "xrp"),
+    "DOGE": ("dogecoin", "dogecoin"),
+    "ADA": ("cardano", "cardano"),
+    "AVAX": ("avalanche", "avalanche"),
+    "LINK": ("chainlink", "chainlink"),
+    "MATIC": ("matic-network", "polygon"),
+    "DOT": ("polkadot", "polkadot"),
+    "LTC": ("litecoin", "litecoin"),
+    "BNB": ("binancecoin", "binancecoin"),
+    "TRX": ("tron", "tron"),
+    "ATOM": ("cosmos", "cosmos"),
+    "NEAR": ("near", "near"),
+    "ARB": ("arbitrum", "arbitrum"),
+    "OP": ("optimism", "optimism"),
 }
 
-_SYMBOL_PAT = re.compile(
-    r"(?:NSE\s*:\s*|BSE\s*:\s*)?([A-Z]{2,12})(?:\.(?:NS|BO))?\b"
-)
-_PRICE_PAT = re.compile(r"(?:Rs\.?|INR|₹)\s*([\d,]+\.?\d*)")
+_COIN_PAT = re.compile(r"\b([A-Z]{2,6})(?:[/\-\s]?(?:USD₮|USDT|USD|INR|BTC|ETH))?\b")
+_PAIR_PAT = re.compile(r"\b([A-Z]{2,6})(?:[/\-]?(?:USDT|USD|INR))\b", re.I)
+_PRICE_PAT = re.compile(r"(?:\$|USD|INR|₹)\s*([\d,]+\.?\d*)")
 
 
-def resolve_symbols(text: str) -> list[str]:
-    """Extract likely NSE/BSE symbols from free text. Deduped, order kept."""
+def resolve_coins(text: str) -> list[str]:
+    """Extract likely coin symbols. Deduped, order kept."""
     out: list[str] = []
-    for m in _SYMBOL_PAT.findall(text or ""):
-        sym = m.strip().upper()
-        if sym in KNOWN_SYMBOLS and sym not in out:
+    for m in _PAIR_PAT.findall(text or ""):
+        sym = m.upper()
+        if sym in KNOWN_COINS and sym not in out:
             out.append(sym)
-    # Also catch explicit XXX.NS / XXX.BO / NSE:XXX forms for unknown names.
-    for m in re.findall(r"\b([A-Z]{2,12})\.(?:NS|BO)\b|(?:NSE|BSE)\s*:\s*([A-Z]{2,12})\b", text or ""):
-        sym = (m[0] or m[1]).upper()
-        if sym and sym not in out:
+    for m in _COIN_PAT.findall(text or ""):
+        sym = m.upper()
+        if sym in KNOWN_COINS and sym not in out:
             out.append(sym)
     return out[:3]
 
 
-def build_data_urls(symbol: str) -> list[str]:
-    """Deterministic deep-check quote pages for a symbol."""
+def build_crypto_urls(symbol: str) -> list[str]:
+    """Deterministic tracking pages for a coin."""
     s = (symbol or "").upper().strip()
-    if not s or s in ("NIFTY", "SENSEX", "BANKNIFTY", "INDIAVIX"):
-        return ["https://finance.yahoo.com/quote/%5ENSEI"]
-    base = re.sub(r"[^A-Z]", "", s)
-    return [
-        f"https://finance.yahoo.com/quote/{base}.NS",
-        f"https://www.screener.in/company/{base}/",
-    ]
+    urls = [f"https://finance.yahoo.com/quote/{s}-USD"]
+    if s in KNOWN_COINS:
+        gecko, desk = KNOWN_COINS[s]
+        urls.append(f"https://www.coingecko.com/en/coins/{gecko}")
+        urls.append(f"https://www.coindesk.com/price/{desk}")
+    return urls
 
 
 def parse_prices(text: str) -> list[str]:
-    """Pull Rs/INR/₹ price mentions for cross-checking. Returns raw strings."""
     return _PRICE_PAT.findall(text or "")[:10]
 
 
 def deep_check(pages: list[dict]) -> list[str]:
-    """Data-quality warnings across fetched pages. Pure function, testable.
-
-    Each page: {"url": str, "text": str, "error": str|None}.
-    Returns warning strings (empty = all good).
-    """
+    """Data-quality warnings across fetched pages. Pure function, testable."""
     warnings: list[str] = []
     ok_pages = [p for p in pages if not p.get("error") and (p.get("text") or "").strip()]
     if not pages:
@@ -95,7 +94,6 @@ def deep_check(pages: list[dict]) -> list[str]:
     if not ok_pages:
         warnings.append("no usable market data — mark prices 'unknown'")
         return warnings
-    # Cross-check: distinct price mentions across sources.
     seen: set[str] = set()
     for p in ok_pages:
         for px in parse_prices(p.get("text", "")):
@@ -106,32 +104,31 @@ def deep_check(pages: list[dict]) -> list[str]:
 
 
 def live_news(query: str, max_items: int = 3) -> list[dict]:
-    """Live headlines for a symbol/market. Never raises; [] on failure."""
+    """Live headlines for a coin/market. Never raises; [] on failure."""
     try:
         from agency.news import fetch_rss
 
-        return fetch_rss(query, max_items=max_items, region="IN") or []
+        return fetch_rss(query, max_items=max_items, region="US") or []
     except Exception:
         return []
 
 
-class TradingAgent(AgentMemoryMixin):
+class CryptoAgent(AgentMemoryMixin):
     def __init__(self, model: str | None = None, memory=None, use_memory: bool = True):
-        self.role = "trading"
-        self.model = model or registry.model_for("trading")
-        self.system = registry.AGENTS["trading"]["system"]
+        self.role = "crypto"
+        self.model = model or registry.model_for("crypto")
+        self.system = registry.AGENTS["crypto"]["system"]
         self._memory = memory
         self.use_memory = use_memory
 
     def run(self, instruction: str, context: str = "", stream_output: bool = False, on_retry=None) -> dict:
         text = ((context or "") + "\n" + (instruction or "")).strip()
         explicit_urls = [u.rstrip(".,);]") for u in URL_RE.findall(text)][:MAX_URLS]
-        symbols = resolve_symbols(text)
+        coins = resolve_coins(text)
 
-        # Auto-add deep-check URLs for top symbols if budget allows.
         urls: list[str] = list(explicit_urls)
-        for sym in symbols[:2]:
-            for u in build_data_urls(sym):
+        for coin in coins[:2]:
+            for u in build_crypto_urls(coin):
                 if len(urls) >= MAX_URLS:
                     break
                 if u not in urls:
@@ -151,14 +148,13 @@ class TradingAgent(AgentMemoryMixin):
                 pages.append({"url": url, "text": "", "error": f"fetch failed ({e})"})
 
         warnings = deep_check(pages)
-        # Real-time link: live news for the top symbol, zero NIM cost.
-        news = live_news(f"{symbols[0]} stock" if symbols else "")
+        # Real-time link: live news for the top coin, zero NIM cost.
+        news = live_news(f"{coins[0]} crypto" if coins else (instruction.strip()[:80] or "crypto market"))
 
         user = f"Task:\n{instruction}"
-        if symbols:
-            user += f"\n\nSymbols detected: {', '.join(symbols)}"
+        if coins:
+            user += f"\n\nCoins detected: {', '.join(coins)}"
         if context:
-            # Upstream agents (researcher/scraper/url_data) land here via pipeline handoff.
             user += f"\n\nUpstream agent context (use as evidence, don't repeat verbatim):\n{context[:4000]}"
         if pages:
             chunks = []
@@ -169,9 +165,9 @@ class TradingAgent(AgentMemoryMixin):
                     chunks.append(f"Source {p['url']}:\n{p['text']}")
             user += "\n\nFetched market data:\n" + "\n---\n".join(chunks)
         else:
-            user += "\n\n(No symbols/URLs fetched — work from the task description, mark prices 'unknown', and ask for the stock symbol.)"
+            user += "\n\n(No coins/URLs fetched — work from the task description, mark prices 'unknown', and ask for the coin symbol.)"
         if news:
-            user += "\n\nLive market news (use for strategy):\n" + "\n".join(
+            user += "\n\nLive crypto news (use for strategy):\n" + "\n".join(
                 f"- {n['title']} ({n['source']}, {n['time']})" for n in news)
         if warnings:
             user += "\n\nData-quality warnings (surface these in output):\n- " + "\n- ".join(warnings)
